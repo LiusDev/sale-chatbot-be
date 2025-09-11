@@ -31,7 +31,6 @@ export const authController = {
 					response_type: "code",
 					scope: "openid email profile",
 					state: state,
-					access_type: "offline",
 				})
 
 				const authUrl = `${GoogleAuth.AUTH_URL}?${params.toString()}`
