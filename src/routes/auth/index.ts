@@ -6,6 +6,7 @@ import { generateState } from "../../utils/crypto"
 import { error } from "../../utils/error"
 import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 import { GoogleAuth, JwtExp } from "../../utils/constant"
+import { getCookieConfigWithMaxAge } from "../../utils/cookie"
 import { redirect, response } from "../../utils/response"
 import {
 	exchangeGoogleCodeForToken,
@@ -32,12 +33,8 @@ auth.get(
 						c.env.FE_CALLBACK_URL,
 					value: generateState(),
 				}
-				setCookie(c, "oauth_state", state.value, {
-					httpOnly: true,
-					secure: true,
-					sameSite: "None",
-					maxAge: 600, // 10 minutes
-				})
+				const cookieOptions = getCookieConfigWithMaxAge(c, 600) // 10 minutes
+				setCookie(c, "oauth_state", state.value, cookieOptions)
 
 				const params = new URLSearchParams({
 					client_id: c.env.GOOGLE_CLIENT_ID,
@@ -107,13 +104,11 @@ auth.get(
 						name: systemUser.name,
 					})
 
-					setCookie(c, "auth_token", token, {
-						httpOnly: true,
-						secure: true,
-						sameSite: "None",
-						domain: ".tuanyenbai.id.vn",
-						maxAge: JwtExp.ONE_WEEK,
-					})
+					const cookieOptions = getCookieConfigWithMaxAge(
+						c,
+						JwtExp.ONE_WEEK
+					)
+					setCookie(c, "auth_token", token, cookieOptions)
 
 					return redirect(c, state.redirect_uri)
 				} catch (err) {
