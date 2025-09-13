@@ -37,7 +37,7 @@ auth.get(
 					value: generateState(),
 				}
 				const cookieOptions = getCookieConfigWithMaxAge(c, 600) // 10 minutes
-				// Uncomment for debugging: debugCookieConfig(c, "oauth_state")
+				debugCookieConfig(c, "oauth_state")
 				setCookie(c, "oauth_state", state.value, cookieOptions)
 
 				const params = new URLSearchParams({
@@ -112,7 +112,7 @@ auth.get(
 						c,
 						JwtExp.ONE_WEEK
 					)
-					// Uncomment for debugging: debugCookieConfig(c, "auth_token")
+					debugCookieConfig(c, "auth_token")
 					setCookie(c, "auth_token", token, cookieOptions)
 
 					return redirect(c, state.redirect_uri)
