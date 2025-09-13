@@ -10,7 +10,7 @@ export function getCookieConfig(c: Context<AppContext>) {
 	const isProduction = c.env.APP_HOST?.includes("tuanyenbai.id.vn")
 
 	return {
-		httpOnly: true,
+		httpOnly: false,
 		secure: isProduction,
 		sameSite: isProduction ? ("None" as const) : ("Lax" as const),
 		...(isProduction && { domain: ".tuanyenbai.id.vn" }),
