@@ -8,40 +8,13 @@ import type { AppContext } from "../types/env"
  */
 export function getCookieConfig(c: Context<AppContext>) {
 	const isProduction = c.env.APP_HOST?.includes("tuanyenbai.id.vn")
-	const origin = c.req.header("Origin") || c.req.header("Referer")
 
-	// Check if frontend request is from localhost (development)
-	const isFrontendLocalhost =
-		origin?.includes("localhost") || origin?.includes("127.0.0.1")
-
-	const config: any = {
+	return {
 		httpOnly: true,
-		secure: isProduction, // Use APP_HOST to determine if backend is production
-		path: "/",
+		secure: isProduction,
+		sameSite: isProduction ? ("None" as const) : ("Lax" as const),
+		...(isProduction && { domain: ".tuanyenbai.id.vn" }),
 	}
-
-	if (isProduction) {
-		// Backend is production
-		if (isFrontendLocalhost) {
-			// Frontend localhost -> Backend production: cross-origin
-			config.sameSite = "None"
-			// Don't set domain for localhost compatibility
-		} else {
-			// Both frontend and backend are production: same domain
-			config.domain = ".tuanyenbai.id.vn"
-			config.sameSite = "Lax"
-		}
-	} else {
-		// Backend is localhost/development (fallback)
-		config.sameSite = "Lax"
-	}
-	
-	// TEMPORARY: Force Lax for debugging
-	console.log(`🚨 FORCING sameSite to Lax for debugging`)
-	config.sameSite = "Lax"
-	delete config.domain // Remove domain for testing
-
-	return config
 }
 
 /**
@@ -58,55 +31,4 @@ export function getCookieConfigWithMaxAge(
 		...getCookieConfig(c),
 		maxAge,
 	}
-}
-
-/**
- * Debug helper to log cookie configuration
- * @param c Hono context
- * @param cookieName Name of the cookie being set
- */
-export function debugCookieConfig(c: Context<AppContext>, cookieName: string) {
-	const config = getCookieConfig(c)
-	const origin = c.req.header("Origin") || c.req.header("Referer")
-	const isProduction = c.env.APP_HOST?.includes("tuanyenbai.id.vn")
-	const isFrontendLocalhost =
-		origin?.includes("localhost") || origin?.includes("127.0.0.1")
-
-	console.log(`🍪 Setting cookie "${cookieName}":`, {
-		config,
-		origin,
-		isProduction,
-		isFrontendLocalhost,
-		appHost: c.env.APP_HOST,
-		headers: {
-			origin: c.req.header("Origin"),
-			referer: c.req.header("Referer"),
-			userAgent: c.req.header("User-Agent"),
-		},
-	})
-
-	// Also log the exact setCookie call that would be made
-	console.log(`🍪 Cookie will be set with:`, JSON.stringify(config, null, 2))
-
-	return config
-}
-
-/**
- * Debug helper to check and log all cookies
- * @param c Hono context  
- * @param operation Operation being performed (e.g., "delete", "read")
- */
-export function debugAllCookies(c: Context<AppContext>, operation: string) {
-	const allCookies = c.req.header("Cookie")
-	console.log(`🍪 ${operation} - All cookies in request:`, allCookies)
-	
-	// Try to get specific cookies
-	const oauthState = c.req.raw.headers.get("Cookie")?.includes("oauth_state")
-	const authToken = c.req.raw.headers.get("Cookie")?.includes("auth_token")
-	
-	console.log(`🍪 Cookie presence check:`, {
-		hasOauthState: oauthState,
-		hasAuthToken: authToken,
-		rawCookieHeader: allCookies
-	})
 }

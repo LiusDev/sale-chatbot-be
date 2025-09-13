@@ -6,11 +6,7 @@ import { generateState } from "../../utils/crypto"
 import { error } from "../../utils/error"
 import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 import { GoogleAuth, JwtExp } from "../../utils/constant"
-import {
-	getCookieConfigWithMaxAge,
-	debugCookieConfig,
-	debugAllCookies,
-} from "../../utils/cookie"
+import { getCookieConfigWithMaxAge } from "../../utils/cookie"
 import { redirect, response } from "../../utils/response"
 import {
 	exchangeGoogleCodeForToken,
@@ -38,7 +34,6 @@ auth.get(
 					value: generateState(),
 				}
 				const cookieOptions = getCookieConfigWithMaxAge(c, 600) // 10 minutes
-				debugCookieConfig(c, "oauth_state")
 				setCookie(c, "oauth_state", state.value, cookieOptions)
 
 				const params = new URLSearchParams({
@@ -64,7 +59,6 @@ auth.get(
 		const provider = c.req.valid("param").provider
 		switch (provider) {
 			case "google":
-				debugAllCookies(c, "callback-start")
 				const errorMessage = c.req.query("error")
 				const code = c.req.query("code")
 				const state = JSON.parse(
@@ -115,7 +109,6 @@ auth.get(
 						c,
 						JwtExp.ONE_WEEK
 					)
-					debugCookieConfig(c, "auth_token")
 					setCookie(c, "auth_token", token, cookieOptions)
 
 					return redirect(c, state.redirect_uri)
