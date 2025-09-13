@@ -11,6 +11,7 @@ import {
 } from "../../libs/google"
 import { getSystemUserByEmail } from "./auth.repo"
 import { generateToken } from "../../utils/jwt"
+import status from "http-status"
 
 export const authController = {
 	getAuthUrl: async (c: Context<AppContext, "/url/:provider">) => {
@@ -58,13 +59,10 @@ export const authController = {
 				const storedState = getCookie(c, "oauth_state")
 
 				if (!code || !state || state !== storedState) {
-					return c.json(
-						{
-							error: "Invalid OAuth parameters",
-							authenticated: false,
-						},
-						400
-					)
+					return error(c, {
+						message: "Invalid OAuth parameters",
+						status: status.BAD_REQUEST,
+					})
 				}
 
 				deleteCookie(c, "oauth_state")
@@ -104,7 +102,7 @@ export const authController = {
 					console.error("OAuth error:", err)
 					return error(c, {
 						message: "OAuth error",
-						status: 500,
+						status: status.INTERNAL_SERVER_ERROR,
 					})
 				}
 			default:
