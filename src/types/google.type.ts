@@ -5,3 +5,8 @@ export interface GoogleProfile {
 	picture: string
 	verified_email: boolean
 }
+
+export interface GoogleOAuthState {
+	redirect_uri: string
+	value: string
+}
