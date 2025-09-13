@@ -95,8 +95,7 @@ export const authController = {
 						httpOnly: true,
 						secure: true,
 						sameSite: "None",
-						// TODO: buy domain and change subdomain bellow
-						domain: ".quydx.id.vn",
+						domain: ".tuanyenbai.id.vn",
 						maxAge: JwtExp.ONE_WEEK,
 					})
 
