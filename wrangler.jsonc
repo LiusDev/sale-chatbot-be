@@ -16,13 +16,13 @@
 			"binding": "VECTORIZE",
 			"index_name": "sale-chatbot-product-index"
 		}
-	]
+	],
+	"vars": {
+		"FE_URL": "http://localhost:3000"
+	}
 	// "compatibility_flags": [
 	//   "nodejs_compat"
 	// ],
-	// "vars": {
-	//   "MY_VAR": "my-variable"
-	// },
 	// "kv_namespaces": [
 	//   {
 	//     "binding": "MY_KV_NAMESPACE",
