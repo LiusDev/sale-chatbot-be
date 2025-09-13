@@ -12,10 +12,11 @@ import {
 	exchangeGoogleCodeForToken,
 	getGoogleUserInfo,
 } from "../../libs/google"
-import { getSystemUserByEmail } from "./auth.repo"
+import { getSystemUser, getSystemUserByEmail } from "./auth.repo"
 import { generateToken } from "../../utils/jwt"
 import status from "http-status"
 import { GoogleOAuthState } from "../../types/google.type"
+import { authMiddleware } from "../../middlewares"
 
 const auth = new Hono<AppContext>()
 
@@ -124,5 +125,18 @@ auth.get(
 		}
 	}
 )
+
+auth.get("/logout", (c) => {
+	deleteCookie(c, "auth_token")
+	return response(c, { message: "Logged out successfully" })
+})
+
+auth.get("/me", authMiddleware, async (c) => {
+	const user = c.get("jwtPayload")
+	const systemUser = await getSystemUser(c, {
+		id: user.sub,
+	})
+	return response(c, { user: systemUser })
+})
 
 export default auth
