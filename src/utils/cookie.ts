@@ -35,6 +35,11 @@ export function getCookieConfig(c: Context<AppContext>) {
 		// Backend is localhost/development (fallback)
 		config.sameSite = "Lax"
 	}
+	
+	// TEMPORARY: Force Lax for debugging
+	console.log(`🚨 FORCING sameSite to Lax for debugging`)
+	config.sameSite = "Lax"
+	delete config.domain // Remove domain for testing
 
 	return config
 }
@@ -84,4 +89,24 @@ export function debugCookieConfig(c: Context<AppContext>, cookieName: string) {
 	console.log(`🍪 Cookie will be set with:`, JSON.stringify(config, null, 2))
 
 	return config
+}
+
+/**
+ * Debug helper to check and log all cookies
+ * @param c Hono context  
+ * @param operation Operation being performed (e.g., "delete", "read")
+ */
+export function debugAllCookies(c: Context<AppContext>, operation: string) {
+	const allCookies = c.req.header("Cookie")
+	console.log(`🍪 ${operation} - All cookies in request:`, allCookies)
+	
+	// Try to get specific cookies
+	const oauthState = c.req.raw.headers.get("Cookie")?.includes("oauth_state")
+	const authToken = c.req.raw.headers.get("Cookie")?.includes("auth_token")
+	
+	console.log(`🍪 Cookie presence check:`, {
+		hasOauthState: oauthState,
+		hasAuthToken: authToken,
+		rawCookieHeader: allCookies
+	})
 }

@@ -9,6 +9,7 @@ import { GoogleAuth, JwtExp } from "../../utils/constant"
 import {
 	getCookieConfigWithMaxAge,
 	debugCookieConfig,
+	debugAllCookies,
 } from "../../utils/cookie"
 import { redirect, response } from "../../utils/response"
 import {
@@ -63,12 +64,14 @@ auth.get(
 		const provider = c.req.valid("param").provider
 		switch (provider) {
 			case "google":
+				debugAllCookies(c, "callback-start")
 				const errorMessage = c.req.query("error")
 				const code = c.req.query("code")
 				const state = JSON.parse(
 					c.req.query("state") ?? ""
 				) as GoogleOAuthState
 				const storedState = getCookie(c, "oauth_state")
+				console.log(`🍪 Stored state from cookie:`, storedState)
 
 				if (errorMessage) {
 					return redirect(
