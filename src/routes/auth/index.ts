@@ -127,7 +127,8 @@ auth.get(
 )
 
 auth.get("/logout", (c) => {
-	deleteCookie(c, "auth_token")
+	const cookieOptions = getCookieConfigWithMaxAge(c, 0)
+	deleteCookie(c, "auth_token", cookieOptions)
 	return response(c, { message: "Logged out successfully" })
 })
 
