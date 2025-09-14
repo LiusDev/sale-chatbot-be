@@ -1,7 +1,7 @@
 import { Context } from "hono"
 import { AppContext } from "../../types/env"
 import { db } from "../../libs/db"
-import { systemUsersTable } from "../../libs/schema"
+import { systemUsers } from "../../libs/schema"
 import { eq } from "drizzle-orm"
 
 // get system user by id
@@ -16,8 +16,8 @@ export const getSystemUser = async (
 	try {
 		const user = await db(c.env)
 			.select()
-			.from(systemUsersTable)
-			.where(eq(systemUsersTable.id, id))
+			.from(systemUsers)
+			.where(eq(systemUsers.id, id))
 			.limit(1)
 		return user[0]
 	} catch (error) {
@@ -38,8 +38,8 @@ export const getSystemUserByEmail = async (
 	try {
 		const user = await db(c.env)
 			.select()
-			.from(systemUsersTable)
-			.where(eq(systemUsersTable.email, email))
+			.from(systemUsers)
+			.where(eq(systemUsers.email, email))
 			.limit(1)
 		return user[0]
 	} catch (error) {
@@ -62,9 +62,9 @@ export const updateSystemUserByEmail = async (
 ) => {
 	try {
 		await db(c.env)
-			.update(systemUsersTable)
+			.update(systemUsers)
 			.set({ avatar, name })
-			.where(eq(systemUsersTable.email, email))
+			.where(eq(systemUsers.email, email))
 	} catch (error) {
 		console.error(error)
 		return null

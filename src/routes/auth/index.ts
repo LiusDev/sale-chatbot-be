@@ -29,30 +29,40 @@ auth.get(
 	zValidator("param", getAuthProviderPathSchema),
 	zValidator("query", getAuthUrlQuerySchema),
 	(c) => {
-		const provider = c.req.valid("param").provider
-		switch (provider) {
-			case "google":
-				const state: GoogleOAuthState = {
-					redirect_uri:
-						c.req.valid("query").redirect_uri ??
-						c.env.FE_CALLBACK_URL,
-					value: generateState(),
-				}
-				const cookieOptions = getCookieConfigWithMaxAge(c, 600) // 10 minutes
-				setCookie(c, "oauth_state", state.value, cookieOptions)
+		try {
+			const provider = c.req.valid("param").provider
+			switch (provider) {
+				case "google":
+					const state: GoogleOAuthState = {
+						redirect_uri:
+							c.req.valid("query").redirect_uri ??
+							c.env.FE_CALLBACK_URL,
+						value: generateState(),
+					}
+					const cookieOptions = getCookieConfigWithMaxAge(c, 600) // 10 minutes
+					setCookie(c, "oauth_state", state.value, cookieOptions)
 
-				const params = new URLSearchParams({
-					client_id: c.env.GOOGLE_CLIENT_ID,
-					redirect_uri: `${c.env.APP_HOST}${GoogleAuth.REDIRECT_URI}`,
-					response_type: "code",
-					scope: "openid email profile",
-					state: JSON.stringify(state),
-				})
+					const params = new URLSearchParams({
+						client_id: c.env.GOOGLE_CLIENT_ID,
+						redirect_uri: `${c.env.APP_HOST}${GoogleAuth.REDIRECT_URI}`,
+						response_type: "code",
+						scope: "openid email profile",
+						state: JSON.stringify(state),
+					})
 
-				const authUrl = `${GoogleAuth.AUTH_URL}?${params.toString()}`
-				return response(c, { authUrl, state })
-			default:
-				return error(c)
+					const authUrl = `${
+						GoogleAuth.AUTH_URL
+					}?${params.toString()}`
+					return response(c, { authUrl, state })
+				default:
+					return error(c)
+			}
+		} catch (err) {
+			console.error("Error in /url/:provider:", err)
+			return error(c, {
+				message: "Failed to generate auth URL",
+				status: status.INTERNAL_SERVER_ERROR,
+			})
 		}
 	}
 )
@@ -136,18 +146,34 @@ auth.get(
 	}
 )
 
-auth.get("/logout", (c) => {
-	const cookieOptions = getCookieConfigWithMaxAge(c, 0)
-	deleteCookie(c, "auth_token", cookieOptions)
-	return response(c, { message: "Logged out successfully" })
+auth.get("/logout", authMiddleware, (c) => {
+	try {
+		const cookieOptions = getCookieConfigWithMaxAge(c, 0)
+		deleteCookie(c, "auth_token", cookieOptions)
+		return response(c, { message: "Logged out successfully" })
+	} catch (err) {
+		console.error("Error in /logout:", err)
+		return error(c, {
+			message: "Failed to logout",
+			status: status.INTERNAL_SERVER_ERROR,
+		})
+	}
 })
 
 auth.get("/me", authMiddleware, async (c) => {
-	const user = c.get("jwtPayload")
-	const systemUser = await getSystemUser(c, {
-		id: user.sub,
-	})
-	return response(c, { user: systemUser })
+	try {
+		const user = c.get("jwtPayload")
+		const systemUser = await getSystemUser(c, {
+			id: user.sub,
+		})
+		return response(c, { user: systemUser })
+	} catch (err) {
+		console.error("Error in /me:", err)
+		return error(c, {
+			message: "Failed to get user info",
+			status: status.INTERNAL_SERVER_ERROR,
+		})
+	}
 })
 
 export default auth

@@ -21,9 +21,12 @@
 			"index_name": "sale-chatbot-product-index"
 		}
 	],
-	"vars": {
-		"FE_URL": "http://localhost:3000"
-	}
+	"r2_buckets": [
+		{
+			"bucket_name": "sale-chatbot-r2",
+			"binding": "sale_chatbot_r2"
+		}
+	]
 	// "compatibility_flags": [
 	//   "nodejs_compat"
 	// ],
@@ -31,12 +34,6 @@
 	//   {
 	//     "binding": "MY_KV_NAMESPACE",
 	//     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-	//   }
-	// ],
-	// "r2_buckets": [
-	//   {
-	//     "binding": "MY_BUCKET",
-	//     "bucket_name": "my-bucket"
 	//   }
 	// ],
 	// "d1_databases": [

@@ -4,6 +4,7 @@ import { cors } from "hono/cors"
 import { AppContext } from "./types/env"
 import { errorHandler } from "./middlewares"
 import auth from "./routes/auth"
+import products from "./routes/products"
 const app = new Hono<AppContext>().basePath("/api")
 
 app.use(
@@ -58,11 +59,26 @@ function isLocalhostOrigin(origin: string): boolean {
 }
 
 app.get("/", (c: Context<AppContext>) => {
-	return c.text("Hello World!")
+	try {
+		return c.text("Hello World!")
+	} catch (err) {
+		console.error("Error in root handler:", err)
+		return c.json(
+			{
+				error: {
+					message: "Internal Server Error",
+				},
+			},
+			500
+		)
+	}
 })
 
 // Auth routes
 app.route("/auth", auth)
+
+// Products routes
+app.route("/products", products)
 
 app.onError(errorHandler)
 
