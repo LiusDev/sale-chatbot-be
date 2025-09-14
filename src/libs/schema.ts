@@ -5,4 +5,5 @@ export const systemUsersTable = sqliteTable("system_users", {
 	name: text().notNull(),
 	email: text().notNull().unique(),
 	role: text().notNull().default("super_admin"),
+	avatar: text().default(""),
 })

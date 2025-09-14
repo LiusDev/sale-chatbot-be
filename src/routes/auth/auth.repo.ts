@@ -47,3 +47,26 @@ export const getSystemUserByEmail = async (
 		return null
 	}
 }
+
+export const updateSystemUserByEmail = async (
+	c: Context<AppContext>,
+	{
+		email,
+		avatar,
+		name,
+	}: {
+		email: string
+		avatar: string
+		name: string
+	}
+) => {
+	try {
+		await db(c.env)
+			.update(systemUsersTable)
+			.set({ avatar, name })
+			.where(eq(systemUsersTable.email, email))
+	} catch (error) {
+		console.error(error)
+		return null
+	}
+}

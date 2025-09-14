@@ -12,7 +12,11 @@ import {
 	exchangeGoogleCodeForToken,
 	getGoogleUserInfo,
 } from "../../libs/google"
-import { getSystemUser, getSystemUserByEmail } from "./auth.repo"
+import {
+	getSystemUser,
+	getSystemUserByEmail,
+	updateSystemUserByEmail,
+} from "./auth.repo"
 import { generateToken } from "../../utils/jwt"
 import status from "http-status"
 import { GoogleOAuthState } from "../../types/google.type"
@@ -92,6 +96,7 @@ auth.get(
 					const userInfo = await getGoogleUserInfo(
 						tokenResponse.access_token
 					)
+
 					const systemUser = await getSystemUserByEmail(c, {
 						email: userInfo.email,
 					})
@@ -101,6 +106,11 @@ auth.get(
 							`${state.redirect_uri}?error=User not found`
 						)
 					}
+					await updateSystemUserByEmail(c, {
+						email: userInfo.email,
+						avatar: userInfo.picture,
+						name: userInfo.name,
+					})
 					const token = await generateToken(c, {
 						sub: systemUser.id,
 						name: systemUser.name,
