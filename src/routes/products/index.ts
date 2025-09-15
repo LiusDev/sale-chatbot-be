@@ -24,7 +24,7 @@ import {
 	updateProductGroup,
 } from "./products.repo"
 import { authMiddleware } from "../../middlewares"
-import { uploadImages } from "../../libs/r2"
+import { uploadImages, cleanupOldImages } from "../../libs/r2"
 import status from "http-status"
 
 const products = new Hono<AppContext>()
@@ -210,7 +210,6 @@ products.post(
 				images: rawImages,
 			} = c.req.valid("json")
 
-			// Upload images to Cloudinary and preserve order
 			const uploadedImageUrls =
 				rawImages && rawImages.length > 0
 					? (await uploadImages(c, rawImages)).map(
@@ -264,13 +263,59 @@ products.put(
 				images: rawImages,
 			} = c.req.valid("json")
 
-			// Upload new images to Cloudinary if provided
-			const uploadedImageUrls =
-				rawImages && rawImages.length > 0
-					? (await uploadImages(c, rawImages)).map(
-							(img) => img.secure_url
-					  )
-					: undefined
+			// Process images if provided - separate existing vs new
+			let processedImages:
+				| { existingImages: string[]; newImages: string[] }
+				| undefined
+
+			if (rawImages && rawImages.length > 0) {
+				const existingImages: string[] = []
+				const newImages: {
+					url: string
+					altText?: string
+					index: number
+				}[] = []
+
+				// Separate existing images (to keep) from new images (to upload)
+				rawImages.forEach((img) => {
+					if (img.isExisting) {
+						// This is an existing image URL to keep
+						existingImages.push(img.url)
+					} else {
+						// This is a new base64 image to upload
+						newImages.push({
+							url: img.url,
+							altText: img.altText,
+							index: img.index,
+						})
+					}
+				})
+
+				// Upload new images if any
+				const uploadedNewImages =
+					newImages.length > 0
+						? (await uploadImages(c, newImages)).map(
+								(img) => img.secure_url
+						  )
+						: []
+
+				// Combine existing URLs with newly uploaded URLs, maintaining order
+				const allImageUrls: string[] = []
+				let newImageIndex = 0
+
+				rawImages.forEach((img) => {
+					if (img.isExisting) {
+						allImageUrls.push(img.url) // Keep existing
+					} else {
+						allImageUrls.push(uploadedNewImages[newImageIndex++]) // Add new
+					}
+				})
+
+				processedImages = {
+					existingImages,
+					newImages: allImageUrls,
+				}
+			}
 
 			const product = await updateProduct(c, {
 				groupId,
@@ -279,7 +324,8 @@ products.put(
 				description,
 				price,
 				metadata,
-				images: uploadedImageUrls,
+				images: processedImages?.newImages,
+				imagesToKeep: processedImages?.existingImages,
 			})
 
 			if (!product) {

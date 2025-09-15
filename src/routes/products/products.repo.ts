@@ -5,6 +5,7 @@ import { db } from "../../libs/db"
 import {
 	enhanceImagesWithPresignedUrls,
 	generateMultiplePresignedUrls,
+	cleanupOldImages,
 } from "../../libs/r2"
 import {
 	products as productsTable,
@@ -445,6 +446,7 @@ export const updateProduct = async (
 		price,
 		metadata,
 		images,
+		imagesToKeep,
 	}: {
 		groupId: number
 		productId: number
@@ -453,6 +455,7 @@ export const updateProduct = async (
 		price?: number
 		metadata?: string
 		images?: string[]
+		imagesToKeep?: string[]
 	}
 ) => {
 	const dbConnection = db(c.env)
@@ -514,7 +517,23 @@ export const updateProduct = async (
 
 	// Handle images update if provided
 	if (images !== undefined) {
-		// Delete existing images
+		// Get current images before deleting to clean up R2
+		const currentImages = await dbConnection
+			.select({
+				url: productImagesTable.image_url,
+			})
+			.from(productImagesTable)
+			.where(eq(productImagesTable.product_id, productId))
+
+		const currentImageUrls = currentImages.map((img) => img.url)
+
+		// Clean up old images from R2 (only delete images not in imagesToKeep)
+		if (currentImageUrls.length > 0) {
+			const imagesToKeepList = imagesToKeep || []
+			await cleanupOldImages(c, currentImageUrls, imagesToKeepList)
+		}
+
+		// Delete existing image records from database
 		await dbConnection
 			.delete(productImagesTable)
 			.where(eq(productImagesTable.product_id, productId))

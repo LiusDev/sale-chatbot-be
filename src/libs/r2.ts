@@ -202,6 +202,50 @@ export const generateDownloadPresignedUrl = (
 	return generatePresignedUrl(c, objectKey)
 }
 
+// Clean up old images when updating product
+export const cleanupOldImages = async (
+	c: Context<AppContext>,
+	oldImageUrls: string[],
+	imagesToKeep: string[]
+): Promise<{ deleted: string[]; failed: string[] }> => {
+	const results = {
+		deleted: [] as string[],
+		failed: [] as string[],
+	}
+
+	// Find images that need to be deleted (old images not in keep list)
+	const imagesToDelete = oldImageUrls.filter(
+		(url) => !imagesToKeep.includes(url)
+	)
+
+	if (imagesToDelete.length === 0) {
+		return results
+	}
+
+	console.log(`🗑️ Cleaning up ${imagesToDelete.length} old images from R2`)
+
+	for (const imageUrl of imagesToDelete) {
+		try {
+			const deleted = await deleteImage(c, imageUrl)
+			if (deleted) {
+				results.deleted.push(imageUrl)
+				console.log(`✅ Deleted old image: ${imageUrl}`)
+			} else {
+				results.failed.push(imageUrl)
+				console.log(`❌ Failed to delete: ${imageUrl}`)
+			}
+		} catch (error) {
+			results.failed.push(imageUrl)
+			console.error(`❌ Error deleting ${imageUrl}:`, error)
+		}
+	}
+
+	console.log(
+		`🧹 Cleanup completed: ${results.deleted.length} deleted, ${results.failed.length} failed`
+	)
+	return results
+}
+
 // Test public URL generation (for debugging)
 export const testPresignedUrlGeneration = (
 	c: Context<AppContext>
