@@ -11,7 +11,7 @@ export const response = (
 	data: any,
 	status: number = httpStatus.OK
 ) => {
-	return c.json(data, status as ContentfulStatusCode)
+	return c.json({ success: true, data }, status as ContentfulStatusCode)
 }
 
 export const listResponse = (
@@ -24,7 +24,10 @@ export const listResponse = (
 	},
 	status: number = httpStatus.OK
 ) => {
-	return c.json({ data, meta }, status as ContentfulStatusCode)
+	return c.json(
+		{ success: true, data, pagination: meta },
+		status as ContentfulStatusCode
+	)
 }
 
 export const redirect = (
