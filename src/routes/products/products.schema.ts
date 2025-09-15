@@ -9,7 +9,7 @@ export type CreateProductGroupBodySchema = z.infer<
 >
 
 export const productGroupParamSchema = z.object({
-	groupId: z.number(),
+	groupId: z.coerce.number(),
 })
 export type ProductGroupParamSchema = z.infer<typeof productGroupParamSchema>
 
@@ -20,7 +20,7 @@ export type UpdateProductGroupBodySchema = z.infer<
 >
 
 export const productParamSchema = z.object({
-	productId: z.number(),
+	productId: z.coerce.number(),
 })
 export type ProductParamSchema = z.infer<typeof productParamSchema>
 
@@ -39,18 +39,5 @@ export const createProductBodySchema = z.object({
 })
 export type CreateProductBodySchema = z.infer<typeof createProductBodySchema>
 
-export const updateProductBodySchema = z.object({
-	name: z.string().optional(),
-	description: z.string().optional(),
-	price: z.number().optional(),
-	metadata: z.string().optional(),
-	images: z
-		.object({
-			url: z.string(),
-			altText: z.string().optional(),
-			index: z.number(),
-		})
-		.array()
-		.optional(),
-})
+export const updateProductBodySchema = createProductBodySchema.partial()
 export type UpdateProductBodySchema = z.infer<typeof updateProductBodySchema>

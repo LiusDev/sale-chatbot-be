@@ -35,8 +35,7 @@ auth.get(
 				case "google":
 					const state: GoogleOAuthState = {
 						redirect_uri:
-							c.req.valid("query").redirect_uri ??
-							c.env.FE_CALLBACK_URL,
+							c.req.valid("query").redirect_uri ?? c.env.FE_URL,
 						value: generateState(),
 					}
 					const cookieOptions = getCookieConfigWithMaxAge(c, 600) // 10 minutes
@@ -116,7 +115,7 @@ auth.get(
 							`${state.redirect_uri}?error=User not found`
 						)
 					}
-					await updateSystemUserByEmail(c, {
+					const updatedUser = await updateSystemUserByEmail(c, {
 						email: userInfo.email,
 						avatar: userInfo.picture,
 						name: userInfo.name,

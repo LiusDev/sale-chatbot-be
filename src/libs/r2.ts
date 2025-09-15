@@ -104,86 +104,42 @@ export const uploadImages = async (
 	}
 }
 
-// Generate a temporary URL using custom token-based approach
-// Since R2 doesn't have native presigned URLs in Workers, we'll create our own token system
-export const generatePresignedUrl = async (
+// Generate a public URL for R2 object using custom domain
+export const generatePresignedUrl = (
 	c: Context<AppContext>,
-	objectKey: string,
-	expiresIn: number = 7 * 24 * 60 * 60 // 1 week in seconds
-): Promise<string> => {
-	try {
-		// Get R2 bucket from bindings
-		const bucket = c.env.sale_chatbot_r2
-
-		// Check if object exists (optional - can skip for performance)
-		// const object = await bucket.head(objectKey)
-		// if (!object) {
-		//   throw new Error(`Object ${objectKey} not found`)
-		// }
-
-		// Create a simple access token with expiration
-		const expirationTime = Math.floor(Date.now() / 1000) + expiresIn
-		const tokenPayload = {
-			key: objectKey,
-			exp: expirationTime,
-		}
-
-		// Create a simple signed token (you can use JWT or custom signing)
-		const token = btoa(JSON.stringify(tokenPayload))
-
-		// Return URL with access token - this would need a custom endpoint to serve
-		// For now, we'll use the public R2 URL directly
-		const baseUrl = `https://pub-${c.env.CLOUDFLARE_ACCOUNT_ID}.r2.dev`
-		return `${baseUrl}/${objectKey}`
-	} catch (error) {
-		console.error("Error generating presigned URL:", error)
-		// Fallback: return a basic URL
-		const baseUrl = `https://pub-${c.env.CLOUDFLARE_ACCOUNT_ID}.r2.dev`
-		return `${baseUrl}/${objectKey}`
-	}
+	objectKey: string
+): string => {
+	// Ensure custom domain doesn't end with slash and objectKey doesn't start with slash
+	const domain = c.env.R2_CUSTOM_DOMAIN.replace(/\/$/, "")
+	const key = objectKey.replace(/^\//, "")
+	return `${domain}/${key}`
 }
 
-// Generate presigned URLs for multiple object keys
-export const generateMultiplePresignedUrls = async (
+// Generate public URLs for multiple object keys
+export const generateMultiplePresignedUrls = (
 	c: Context<AppContext>,
-	objectKeys: string[],
-	expiresIn?: number
-): Promise<string[]> => {
-	try {
-		const presignedUrlPromises = objectKeys.map((objectKey) =>
-			generatePresignedUrl(c, objectKey, expiresIn)
-		)
-
-		return await Promise.all(presignedUrlPromises)
-	} catch (error) {
-		console.error("Error generating multiple presigned URLs:", error)
-		throw new Error("Failed to generate presigned URLs")
-	}
+	objectKeys: string[]
+): string[] => {
+	return objectKeys.map((objectKey) => generatePresignedUrl(c, objectKey))
 }
 
-// Helper function to convert image URLs with presigned URLs for response
-export const enhanceImagesWithPresignedUrls = async (
+// Helper function to convert image URLs with public URLs for response
+export const enhanceImagesWithPresignedUrls = (
 	c: Context<AppContext>,
 	images: Array<{ url: string; altText: string; index: number }>
-): Promise<
-	Array<{ url: string; altText: string; index: number; presignedUrl: string }>
-> => {
-	try {
-		const objectKeys = images.map((img) => img.url)
-		const presignedUrls = await generateMultiplePresignedUrls(c, objectKeys)
+): Array<{
+	url: string
+	altText: string
+	index: number
+	presignedUrl: string
+}> => {
+	const objectKeys = images.map((img) => img.url)
+	const publicUrls = generateMultiplePresignedUrls(c, objectKeys)
 
-		return images.map((img, idx) => ({
-			...img,
-			presignedUrl: presignedUrls[idx],
-		}))
-	} catch (error) {
-		console.error("Error enhancing images with presigned URLs:", error)
-		// Return original images without presigned URLs if generation fails
-		return images.map((img) => ({
-			...img,
-			presignedUrl: `https://pub-${c.env.CLOUDFLARE_ACCOUNT_ID}.r2.dev/${img.url}`, // Fallback to public URL
-		}))
-	}
+	return images.map((img, idx) => ({
+		...img,
+		presignedUrl: publicUrls[idx],
+	}))
 }
 
 // Delete image from R2 (useful for cleanup)
@@ -225,4 +181,42 @@ export const deleteMultipleImages = async (
 	}
 
 	return results
+}
+
+// Generate public URL for uploading files (now just returns public URL)
+export const generateUploadPresignedUrl = (
+	c: Context<AppContext>,
+	objectKey: string,
+	contentType?: string,
+	expiresIn?: number
+): string => {
+	return generatePresignedUrl(c, objectKey)
+}
+
+// Generate public URL for downloading files
+export const generateDownloadPresignedUrl = (
+	c: Context<AppContext>,
+	objectKey: string,
+	expiresIn?: number
+): string => {
+	return generatePresignedUrl(c, objectKey)
+}
+
+// Test public URL generation (for debugging)
+export const testPresignedUrlGeneration = (
+	c: Context<AppContext>
+): { success: boolean; url?: string; error?: string } => {
+	try {
+		const testObjectKey = "test/sample-image.jpg"
+		const url = generatePresignedUrl(c, testObjectKey)
+
+		console.log("✅ Public URL generated successfully:", url)
+		return { success: true, url }
+	} catch (error) {
+		console.error("❌ Public URL generation failed:", error)
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Unknown error",
+		}
+	}
 }

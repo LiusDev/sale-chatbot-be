@@ -1,6 +1,6 @@
 import { AppContext } from "../../types/env"
 import { Hono } from "hono"
-import { response } from "../../utils/response"
+import { listResponse, response } from "../../utils/response"
 import { error } from "../../utils/error"
 import { searchAndPaginationSchema } from "../../utils/commonValidationSchema"
 import { zValidator } from "@hono/zod-validator"
@@ -25,6 +25,7 @@ import {
 } from "./products.repo"
 import { authMiddleware } from "../../middlewares"
 import { uploadImages } from "../../libs/r2"
+import status from "http-status"
 
 const products = new Hono<AppContext>()
 
@@ -34,12 +35,22 @@ products.use(authMiddleware)
 products.get("/", zValidator("query", searchAndPaginationSchema), async (c) => {
 	try {
 		const { page, limit } = c.req.valid("query")
-		const productGroups = await getProductGroups(c, { page, limit })
-		return response(c, productGroups)
-	} catch (err) {
-		console.error("Error in GET /products:", err)
+		const result = await getProductGroups(c, { page, limit })
+		if (!result) {
+			return error(c, {
+				message: "Failed to get product groups",
+				status: 500,
+			})
+		}
+		return listResponse(c, result.data, {
+			total: result.total,
+			page,
+			limit,
+		})
+	} catch (err: any) {
+		console.error("Error in GET /products:", err.message)
 		return error(c, {
-			message: "Failed to get product groups",
+			message: `Failed to get product groups: ${err.message}`,
 			status: 500,
 		})
 	}
@@ -57,10 +68,10 @@ products.post(
 				description,
 			})
 			return response(c, productGroup)
-		} catch (err) {
-			console.error("Error in POST /products:", err)
+		} catch (err: any) {
+			console.error("Error in POST /products:", err.message)
 			return error(c, {
-				message: "Failed to create product group",
+				message: `Failed to create product group: ${err.message}`,
 				status: 500,
 			})
 		}
@@ -82,10 +93,10 @@ products.put(
 				description,
 			})
 			return response(c, productGroup)
-		} catch (err) {
-			console.error("Error in PUT /products/:id:", err)
+		} catch (err: any) {
+			console.error("Error in PUT /products/:id:", err.message)
 			return error(c, {
-				message: "Failed to update product group",
+				message: `Failed to update product group: ${err.message}`,
 				status: 500,
 			})
 		}
@@ -99,12 +110,12 @@ products.delete(
 	async (c) => {
 		try {
 			const { groupId } = c.req.valid("param")
-			const productGroup = await deleteProductGroup(c, { groupId })
-			return response(c, productGroup)
-		} catch (err) {
-			console.error("Error in DELETE /products/:id:", err)
+			await deleteProductGroup(c, { groupId })
+			return response(c, undefined, status.NO_CONTENT)
+		} catch (err: any) {
+			console.error("Error in DELETE /products/:id:", err.message)
 			return error(c, {
-				message: "Failed to delete product group",
+				message: `Failed to delete product group: ${err.message}`,
 				status: 500,
 			})
 		}
@@ -120,7 +131,7 @@ products.get(
 		try {
 			const groupId = c.req.valid("param").groupId
 			const { keyword, sort, order, page, limit } = c.req.valid("query")
-			const products = await getProductsByGroupId(c, {
+			const result = await getProductsByGroupId(c, {
 				groupId,
 				keyword,
 				sort,
@@ -128,11 +139,21 @@ products.get(
 				page,
 				limit,
 			})
-			return response(c, products)
-		} catch (err) {
-			console.error("Error in GET /products/:groupId:", err)
+			if (!result) {
+				return error(c, {
+					message: "Failed to get products by group",
+					status: 500,
+				})
+			}
+			return listResponse(c, result.data, {
+				total: result.total,
+				page,
+				limit,
+			})
+		} catch (err: any) {
+			console.error("Error in GET /products/:groupId:", err.message)
 			return error(c, {
-				message: "Failed to get products by group",
+				message: `Failed to get products by group: ${err.message}`,
 				status: 500,
 			})
 		}
@@ -160,10 +181,13 @@ products.get(
 				})
 			}
 			return response(c, product)
-		} catch (err) {
-			console.error("Error in GET /products/:groupId/:productId:", err)
+		} catch (err: any) {
+			console.error(
+				"Error in GET /products/:groupId/:productId:",
+				err.message
+			)
 			return error(c, {
-				message: "Failed to get product",
+				message: `Failed to get product: ${err.message}`,
 				status: 500,
 			})
 		}
@@ -211,10 +235,10 @@ products.post(
 			}
 
 			return response(c, product)
-		} catch (err) {
-			console.error("Error in POST /products/:groupId:", err)
+		} catch (err: any) {
+			console.error("Error in POST /products/:groupId:", err.message)
 			return error(c, {
-				message: "Failed to create product",
+				message: `Failed to create product: ${err.message}`,
 				status: 500,
 			})
 		}
@@ -266,10 +290,10 @@ products.put(
 			}
 
 			return response(c, product)
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Error in PUT /products/:groupId/:productId:", err)
 			return error(c, {
-				message: "Failed to update product",
+				message: `Failed to update product: ${err.message}`,
 				status: 500,
 			})
 		}
@@ -300,10 +324,13 @@ products.delete(
 			}
 
 			return response(c, result)
-		} catch (err) {
-			console.error("Error in DELETE /products/:groupId/:productId:", err)
+		} catch (err: any) {
+			console.error(
+				"Error in DELETE /products/:groupId/:productId:",
+				err.message
+			)
 			return error(c, {
-				message: "Failed to delete product",
+				message: `Failed to delete product: ${err.message}`,
 				status: 500,
 			})
 		}

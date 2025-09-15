@@ -15,6 +15,13 @@
       "when": 1757856863221,
       "tag": "0001_concerned_tomorrow_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1757908527582,
+      "tag": "0002_premium_namor",
+      "breakpoints": true
     }
   ]
 }

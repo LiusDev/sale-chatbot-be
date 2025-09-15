@@ -13,17 +13,12 @@ export const getSystemUser = async (
 		id: number
 	}
 ) => {
-	try {
-		const user = await db(c.env)
-			.select()
-			.from(systemUsers)
-			.where(eq(systemUsers.id, id))
-			.limit(1)
-		return user[0]
-	} catch (error) {
-		console.error(error)
-		return null
-	}
+	const user = await db(c.env)
+		.select()
+		.from(systemUsers)
+		.where(eq(systemUsers.id, id))
+		.limit(1)
+	return user[0]
 }
 
 // get system user by email
@@ -35,17 +30,12 @@ export const getSystemUserByEmail = async (
 		email: string
 	}
 ) => {
-	try {
-		const user = await db(c.env)
-			.select()
-			.from(systemUsers)
-			.where(eq(systemUsers.email, email))
-			.limit(1)
-		return user[0]
-	} catch (error) {
-		console.error(error)
-		return null
-	}
+	const user = await db(c.env)
+		.select()
+		.from(systemUsers)
+		.where(eq(systemUsers.email, email))
+		.limit(1)
+	return user[0]
 }
 
 export const updateSystemUserByEmail = async (
@@ -60,13 +50,15 @@ export const updateSystemUserByEmail = async (
 		name: string
 	}
 ) => {
-	try {
-		await db(c.env)
-			.update(systemUsers)
-			.set({ avatar, name })
-			.where(eq(systemUsers.email, email))
-	} catch (error) {
-		console.error(error)
-		return null
-	}
+	const updatedUser = await db(c.env)
+		.update(systemUsers)
+		.set({ avatar, name })
+		.where(eq(systemUsers.email, email))
+		.returning({
+			id: systemUsers.id,
+			email: systemUsers.email,
+			name: systemUsers.name,
+			avatar: systemUsers.avatar,
+		})
+	return updatedUser[0]
 }
