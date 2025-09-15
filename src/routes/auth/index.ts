@@ -176,4 +176,28 @@ auth.get("/me", authMiddleware, async (c) => {
 	}
 })
 
+// develop only api to directly generate jwt token
+auth.get("/token", async (c) => {
+	if (c.env.APP_HOST !== "http://localhost:8787") {
+		return error(c, {
+			message: "This API is only available in development mode",
+			status: status.FORBIDDEN,
+		})
+	}
+	const user = await getSystemUserByEmail(c, {
+		email: "quydx.work@gmail.com",
+	})
+	if (!user) {
+		return error(c, {
+			message: "User not found",
+			status: status.NOT_FOUND,
+		})
+	}
+	const token = await generateToken(c, {
+		sub: user.id,
+		name: user.name,
+	})
+	return response(c, { token })
+})
+
 export default auth

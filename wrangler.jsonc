@@ -24,7 +24,8 @@
 	"r2_buckets": [
 		{
 			"bucket_name": "sale-chatbot-r2",
-			"binding": "sale_chatbot_r2"
+			"binding": "sale_chatbot_r2",
+			"preview_bucket_name": "sale-chatbot-r2-preview"
 		}
 	]
 	// "compatibility_flags": [
