@@ -111,7 +111,7 @@ products.delete(
 		try {
 			const { groupId } = c.req.valid("param")
 			await deleteProductGroup(c, { groupId })
-			return c.status(status.NO_CONTENT)
+			return response(c, undefined)
 		} catch (err: any) {
 			console.error("Error in DELETE /products/:id:", err.message)
 			return error(c, {
@@ -369,7 +369,7 @@ products.delete(
 				})
 			}
 
-			return c.status(status.NO_CONTENT)
+			return response(c, undefined)
 		} catch (err: any) {
 			console.error(
 				"Error in DELETE /products/:groupId/:productId:",

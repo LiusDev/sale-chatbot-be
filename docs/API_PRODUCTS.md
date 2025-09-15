@@ -408,18 +408,7 @@ Xóa sản phẩm và tất cả ảnh liên quan.
 
 ```json
 {
-	"success": true,
-	"data": {
-		"success": true,
-		"deletedProduct": {
-			"id": 1,
-			"name": "iPhone 15",
-			"description": "Latest iPhone model",
-			"price": 999.99,
-			"metadata": "{}",
-			"product_group_id": 1
-		}
-	}
+	"success": true
 }
 ```
 
