@@ -180,76 +180,69 @@ ai.delete("/:agentId", zValidator("param", aiAgentParamSchema), async (c) => {
 })
 
 // Chat with agent
-ai.post(
-	"/:agentId/chat",
-	zValidator("param", aiAgentParamSchema),
-	zValidator("json", chatRequestSchema),
-	async (c) => {
-		try {
-			const { agentId } = c.req.valid("param")
-			const { stream, messages } = c.req.valid("json")
+ai.post("/chat", zValidator("json", chatRequestSchema), async (c) => {
+	try {
+		const { agentId, stream, messages } = c.req.valid("json")
 
-			// Get agent configuration
-			const agent = await getAgentById(c, { agentId })
-			if (!agent) {
-				return error(c, {
-					message: "Agent not found",
-					status: 404,
-				})
-			}
-
-			if (stream) {
-				// Stream response using AI SDK
-				const aiStream = await streamAIResponse(c, {
-					model: agent.model as any,
-					systemPrompt: agent.system_prompt,
-					messages,
-					temperature: agent.temperature,
-					maxTokens: agent.max_tokens,
-					knowledgeSourceGroupId:
-						agent.knowledge_source_group_id || undefined,
-					topK: agent.top_k,
-					groupId: agent.knowledge_source_group_id,
-				})
-
-				// Return the stream response using AI SDK's built-in method
-				return aiStream.toUIMessageStreamResponse()
-			} else {
-				// Non-stream response with Agentic RAG
-				const result = await generateAIResponse(c, {
-					model: agent.model as any,
-					systemPrompt: agent.system_prompt,
-					messages,
-					temperature: agent.temperature,
-					maxTokens: agent.max_tokens,
-					knowledgeSourceGroupId:
-						agent.knowledge_source_group_id || undefined,
-					topK: agent.top_k,
-					groupId: agent.knowledge_source_group_id,
-				})
-
-				// Include tool calls and results in response for debugging/transparency
-				return c.json(result)
-			}
-		} catch (err: any) {
-			console.error("Error in POST /ai/:agentId/chat:", err.message)
+		// Get agent configuration
+		const agent = await getAgentById(c, { agentId })
+		if (!agent) {
 			return error(c, {
-				message: `Failed to chat with agent: ${err.message}`,
-				status: 500,
+				message: "Agent not found",
+				status: 404,
 			})
 		}
+
+		if (stream) {
+			// Stream response using AI SDK
+			const aiStream = await streamAIResponse(c, {
+				model: agent.model as any,
+				systemPrompt: agent.system_prompt,
+				messages,
+				temperature: agent.temperature,
+				maxTokens: agent.max_tokens,
+				knowledgeSourceGroupId:
+					agent.knowledge_source_group_id || undefined,
+				topK: agent.top_k,
+				groupId: agent.knowledge_source_group_id,
+			})
+
+			// Return the stream response using AI SDK's built-in method
+			return aiStream.toUIMessageStreamResponse()
+		} else {
+			// Non-stream response with Agentic RAG
+			const result = await generateAIResponse(c, {
+				model: agent.model as any,
+				systemPrompt: agent.system_prompt,
+				messages,
+				temperature: agent.temperature,
+				maxTokens: agent.max_tokens,
+				knowledgeSourceGroupId:
+					agent.knowledge_source_group_id || undefined,
+				topK: agent.top_k,
+				groupId: agent.knowledge_source_group_id,
+			})
+
+			// Include tool calls and results in response for debugging/transparency
+			return c.json(result)
+		}
+	} catch (err: any) {
+		console.error("Error in POST /ai/:agentId/chat:", err.message)
+		return error(c, {
+			message: `Failed to chat with agent: ${err.message}`,
+			status: 500,
+		})
 	}
-)
+})
 
 // Playground - chat with custom config
 ai.post(
-	"/:agentId/playground",
-	zValidator("param", aiAgentParamSchema),
+	"/playground",
 	zValidator("json", playgroundRequestSchema),
 	async (c) => {
 		try {
-			const { agentId } = c.req.valid("param")
-			const { messages, stream, customConfig } = c.req.valid("json")
+			const { agentId, messages, stream, customConfig } =
+				c.req.valid("json")
 
 			// Get agent configuration
 			const agent = await getAgentById(c, { agentId })

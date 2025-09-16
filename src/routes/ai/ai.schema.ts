@@ -28,6 +28,7 @@ export type UpdateAgentBodySchema = z.infer<typeof updateAgentBodySchema>
 
 // Chat request schema
 export const chatRequestSchema = z.object({
+	agentId: z.number(),
 	stream: z.boolean().default(false),
 	messages: uiMessageSchema.array(),
 })
