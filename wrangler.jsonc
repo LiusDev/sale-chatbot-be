@@ -27,7 +27,7 @@
 			"binding": "sale_chatbot_r2",
 			"preview_bucket_name": "sale-chatbot-r2"
 		}
-	]
+	],
 	// "compatibility_flags": [
 	//   "nodejs_compat"
 	// ],
@@ -44,9 +44,9 @@
 	//     "database_id": ""
 	//   }
 	// ],
-	// "ai": {
-	// 	"binding": "AI"
-	// }
+	"ai": {
+		"binding": "AI"
+	}
 	// "observability": {
 	//   "enabled": true,
 	//   "head_sampling_rate": 1
