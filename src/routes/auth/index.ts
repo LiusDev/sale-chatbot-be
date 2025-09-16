@@ -165,7 +165,10 @@ auth.get("/me", authMiddleware, async (c) => {
 		const systemUser = await getSystemUser(c, {
 			id: user.sub,
 		})
-		return response(c, { user: systemUser })
+		return response(c, {
+			user: systemUser,
+			token: getCookie(c, "auth_token"),
+		})
 	} catch (err) {
 		console.error("Error in /me:", err)
 		return error(c, {
