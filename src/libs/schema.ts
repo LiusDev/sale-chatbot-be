@@ -30,3 +30,18 @@ export const productImages = sqliteTable("product_images", {
 	alt_text: text().default(""),
 	index: int().notNull(),
 })
+
+export const aiAgents = sqliteTable("ai_agents", {
+	id: int().primaryKey({ autoIncrement: true }),
+	name: text().notNull(),
+	description: text().default(""),
+	model: text().notNull(), // @cf/openai/gpt-oss-120b or @cf/meta/llama-3.3-70b-instruct-fp8-fast
+	system_prompt: text().notNull(),
+	knowledge_source_group_id: int().references(() => productGroups.id),
+	top_k: int().notNull().default(5),
+	temperature: int().notNull().default(70), // 0-100, will be converted to 0.0-1.0
+	max_tokens: int().notNull().default(1000),
+	created_by: int().references(() => systemUsers.id),
+	created_at: text().default("CURRENT_TIMESTAMP"),
+	updated_at: text().default("CURRENT_TIMESTAMP"),
+})

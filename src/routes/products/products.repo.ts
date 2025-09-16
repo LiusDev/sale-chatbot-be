@@ -8,6 +8,11 @@ import {
 	cleanupOldImages,
 } from "../../libs/r2"
 import {
+	upsertVector,
+	deleteVector,
+	EmbeddingRequest,
+} from "../../libs/vectorize"
+import {
 	products as productsTable,
 	productGroups as productGroupsTable,
 	productImages as productImagesTable,
@@ -421,6 +426,26 @@ export const createProduct = async (
 			})
 	}
 
+	// Generate and store vector embedding
+	try {
+		const embeddingRequest: EmbeddingRequest = {
+			productId: product.id,
+			groupId: product.product_group_id || 0,
+			productName: product.name,
+			productDescription: product.description || "",
+			metadata: product.metadata || "",
+			price: product.price,
+		}
+
+		await upsertVector(c, embeddingRequest)
+	} catch (error) {
+		console.error(
+			`Failed to create vector embedding for product ${product.id}:`,
+			error
+		)
+		// Don't throw error, just log it - we don't want to fail product creation if vectorize fails
+	}
+
 	// Return the created product with presigned URLs
 	return {
 		...product,
@@ -560,6 +585,28 @@ export const updateProduct = async (
 		}
 	}
 
+	// Update vector embedding if any product data changed
+	if (Object.keys(updateData).length > 0) {
+		try {
+			const embeddingRequest: EmbeddingRequest = {
+				productId: updatedProduct.id,
+				groupId: updatedProduct.product_group_id || 0,
+				productName: updatedProduct.name,
+				productDescription: updatedProduct.description || "",
+				metadata: updatedProduct.metadata || "",
+				price: updatedProduct.price,
+			}
+
+			await upsertVector(c, embeddingRequest)
+		} catch (error) {
+			console.error(
+				`Failed to update vector embedding for product ${productId}:`,
+				error
+			)
+			// Don't throw error, just log it - we don't want to fail product update if vectorize fails
+		}
+	}
+
 	// Return updated product with images and presigned URLs
 	// We already have the updated product from the update operation above
 
@@ -665,6 +712,17 @@ export const deleteProduct = async (
 			metadata: productsTable.metadata,
 			product_group_id: productsTable.product_group_id,
 		})
+
+	// Delete vector embedding
+	try {
+		await deleteVector(c, productId)
+	} catch (error) {
+		console.error(
+			`Failed to delete vector embedding for product ${productId}:`,
+			error
+		)
+		// Don't throw error, just log it - product deletion was successful
+	}
 
 	return { success: true, deletedProduct: deletedProduct[0] }
 }

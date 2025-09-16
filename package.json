@@ -12,7 +12,9 @@
 		"db:studio": "drizzle-kit studio"
 	},
 	"dependencies": {
+		"@ai-sdk/openai": "^2.0.30",
 		"@hono/zod-validator": "^0.7.2",
+		"ai": "^5.0.44",
 		"drizzle-orm": "^0.44.5",
 		"hono": "^4.9.6",
 		"http-status": "^2.1.0",

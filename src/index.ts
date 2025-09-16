@@ -5,6 +5,7 @@ import { AppContext } from "./types/env"
 import { errorHandler } from "./middlewares"
 import auth from "./routes/auth"
 import products from "./routes/products"
+import ai from "./routes/ai"
 import { testPresignedUrlGeneration } from "./libs/r2"
 const app = new Hono<AppContext>().basePath("/api")
 
@@ -81,22 +82,8 @@ app.route("/auth", auth)
 // Products routes
 app.route("/products", products)
 
-// Test endpoint for public URL generation
-app.get("/test/presigned-url", (c: Context<AppContext>) => {
-	try {
-		const result = testPresignedUrlGeneration(c)
-		return c.json(result)
-	} catch (error) {
-		console.error("Error testing public URL:", error)
-		return c.json(
-			{
-				success: false,
-				error: error instanceof Error ? error.message : "Unknown error",
-			},
-			500
-		)
-	}
-})
+// AI routes
+app.route("/ai", ai)
 
 app.onError(errorHandler)
 
