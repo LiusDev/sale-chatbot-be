@@ -37,11 +37,11 @@ Tạo một AI Agent mới với cấu hình tùy chỉnh.
 	"name": "string",
 	"description": "string (optional)",
 	"model": "gpt-4.1-mini-2025-04-14",
-	"system_prompt": "string",
-	"knowledge_source_group_id": "number (optional)",
-	"top_k": "number (optional, default: 5)",
+	"systemPrompt": "string",
+	"knowledgeSourceGroupId": "number (optional)",
+	"topK": "number (optional, default: 5)",
 	"temperature": "number (optional, default: 70, range: 0-100)",
-	"max_tokens": "number (optional, default: 5000)"
+	"maxTokens": "number (optional, default: 5000)"
 }
 ```
 
@@ -52,11 +52,11 @@ Tạo một AI Agent mới với cấu hình tùy chỉnh.
 	"name": "Tư vấn điện thoại",
 	"description": "AI Agent chuyên tư vấn điện thoại và phụ kiện",
 	"model": "gpt-4.1-mini-2025-04-14",
-	"system_prompt": "Bạn là chuyên gia tư vấn điện thoại với nhiều năm kinh nghiệm...",
-	"knowledge_source_group_id": 1,
-	"top_k": 10,
+	"systemPrompt": "Bạn là chuyên gia tư vấn điện thoại với nhiều năm kinh nghiệm...",
+	"knowledgeSourceGroupId": 1,
+	"topK": 10,
 	"temperature": 80,
-	"max_tokens": 4000
+	"maxTokens": 4000
 }
 ```
 
@@ -70,11 +70,11 @@ Tạo một AI Agent mới với cấu hình tùy chỉnh.
 		"name": "Tư vấn điện thoại",
 		"description": "AI Agent chuyên tư vấn điện thoại và phụ kiện",
 		"model": "gpt-4.1-mini-2025-04-14",
-		"system_prompt": "Bạn là chuyên gia tư vấn điện thoại...",
-		"knowledge_source_group_id": 1,
-		"top_k": 10,
+		"systemPrompt": "Bạn là chuyên gia tư vấn điện thoại...",
+		"knowledgeSourceGroupId": 1,
+		"topK": 10,
 		"temperature": 80,
-		"max_tokens": 4000,
+		"maxTokens": 4000,
 		"created_by": 1,
 		"created_at": "2025-01-16T10:30:00Z",
 		"updated_at": "2025-01-16T10:30:00Z"
@@ -108,12 +108,12 @@ Lấy danh sách tất cả AI Agents.
 			"name": "Tư vấn điện thoại",
 			"description": "AI Agent chuyên tư vấn điện thoại và phụ kiện",
 			"model": "gpt-4.1-mini-2025-04-14",
-			"system_prompt": "Bạn là chuyên gia tư vấn điện thoại...",
-			"knowledge_source_group_id": 1,
+			"systemPrompt": "Bạn là chuyên gia tư vấn điện thoại...",
+			"knowledgeSourceGroupId": 1,
 			"knowledge_source_name": "Điện thoại & Phụ kiện",
-			"top_k": 10,
+			"topK": 10,
 			"temperature": 80,
-			"max_tokens": 4000,
+			"maxTokens": 4000,
 			"created_by": 1,
 			"creator_name": "Admin User",
 			"created_at": "2025-01-16T10:30:00Z",
@@ -124,12 +124,12 @@ Lấy danh sách tất cả AI Agents.
 			"name": "Tư vấn laptop",
 			"description": "AI Agent chuyên tư vấn laptop gaming và văn phòng",
 			"model": "gpt-4.1-mini-2025-04-14",
-			"system_prompt": "Bạn là chuyên gia laptop...",
-			"knowledge_source_group_id": 2,
+			"systemPrompt": "Bạn là chuyên gia laptop...",
+			"knowledgeSourceGroupId": 2,
 			"knowledge_source_name": "Laptop & Máy tính",
-			"top_k": 5,
+			"topK": 5,
 			"temperature": 70,
-			"max_tokens": 3000,
+			"maxTokens": 3000,
 			"created_by": 1,
 			"creator_name": "Admin User",
 			"created_at": "2025-01-16T11:00:00Z",
@@ -168,12 +168,12 @@ Lấy thông tin chi tiết của một AI Agent cụ thể.
 		"name": "Tư vấn điện thoại",
 		"description": "AI Agent chuyên tư vấn điện thoại và phụ kiện",
 		"model": "gpt-4.1-mini-2025-04-14",
-		"system_prompt": "Bạn là chuyên gia tư vấn điện thoại với nhiều năm kinh nghiệm trong ngành công nghệ...",
-		"knowledge_source_group_id": 1,
+		"systemPrompt": "Bạn là chuyên gia tư vấn điện thoại với nhiều năm kinh nghiệm trong ngành công nghệ...",
+		"knowledgeSourceGroupId": 1,
 		"knowledge_source_name": "Điện thoại & Phụ kiện",
-		"top_k": 10,
+		"topK": 10,
 		"temperature": 80,
-		"max_tokens": 4000,
+		"maxTokens": 4000,
 		"created_by": 1,
 		"creator_name": "Admin User",
 		"created_at": "2025-01-16T10:30:00Z",
@@ -208,11 +208,11 @@ Cập nhật thông tin của một AI Agent.
 	"name": "string (optional)",
 	"description": "string (optional)",
 	"model": "string (optional)",
-	"system_prompt": "string (optional)",
-	"knowledge_source_group_id": "number (optional)",
-	"top_k": "number (optional)",
+	"systemPrompt": "string (optional)",
+	"knowledgeSourceGroupId": "number (optional)",
+	"topK": "number (optional)",
 	"temperature": "number (optional)",
-	"max_tokens": "number (optional)"
+	"maxTokens": "number (optional)"
 }
 ```
 
@@ -223,7 +223,7 @@ Cập nhật thông tin của một AI Agent.
 	"name": "Tư vấn điện thoại Pro",
 	"description": "AI Agent chuyên tư vấn điện thoại cao cấp và phụ kiện",
 	"temperature": 85,
-	"max_tokens": 5000
+	"maxTokens": 5000
 }
 ```
 
@@ -237,11 +237,11 @@ Cập nhật thông tin của một AI Agent.
 		"name": "Tư vấn điện thoại Pro",
 		"description": "AI Agent chuyên tư vấn điện thoại cao cấp và phụ kiện",
 		"model": "gpt-4.1-mini-2025-04-14",
-		"system_prompt": "Bạn là chuyên gia tư vấn điện thoại...",
-		"knowledge_source_group_id": 1,
-		"top_k": 10,
+		"systemPrompt": "Bạn là chuyên gia tư vấn điện thoại...",
+		"knowledgeSourceGroupId": 1,
+		"topK": 10,
 		"temperature": 85,
-		"max_tokens": 5000,
+		"maxTokens": 5000,
 		"created_by": 1,
 		"created_at": "2025-01-16T10:30:00Z",
 		"updated_at": "2025-01-16T12:00:00Z"
@@ -293,15 +293,15 @@ Xóa một AI Agent.
 
 | Parameter     | Type   | Range    | Default | Description                                            |
 | ------------- | ------ | -------- | ------- | ------------------------------------------------------ |
-| `top_k`       | number | 1-50     | 5       | Số lượng kết quả tìm kiếm tối đa                       |
+| `topK`        | number | 1-50     | 5       | Số lượng kết quả tìm kiếm tối đa                       |
 | `temperature` | number | 0-100    | 70      | Độ sáng tạo của AI (0 = deterministic, 100 = creative) |
-| `max_tokens`  | number | 100-8000 | 5000    | Số token tối đa trong response                         |
+| `maxTokens`   | number | 100-8000 | 5000    | Số token tối đa trong response                         |
 
 ### Knowledge Source Groups
 
 AI Agent được liên kết với một nhóm sản phẩm cụ thể để giới hạn phạm vi tìm kiếm:
 
--   **Set `knowledge_source_group_id`**: Agent chỉ tìm kiếm trong nhóm sản phẩm được chỉ định
+-   **Set `knowledgeSourceGroupId`**: Agent chỉ tìm kiếm trong nhóm sản phẩm được chỉ định
 
 ### AI Agent Tools
 
@@ -348,9 +348,9 @@ curl -X POST https://sale-chatbot-be.tuanngoanbaoai.workers.dev/api/ai \
     "name": "Tư vấn điện thoại",
     "description": "Chuyên gia tư vấn điện thoại",
     "model": "gpt-4.1-mini-2025-04-14",
-    "system_prompt": "Bạn là chuyên gia tư vấn điện thoại với 10 năm kinh nghiệm...",
-    "knowledge_source_group_id": 1,
-    "top_k": 10,
+    "systemPrompt": "Bạn là chuyên gia tư vấn điện thoại với 10 năm kinh nghiệm...",
+    "knowledgeSourceGroupId": 1,
+    "topK": 10,
     "temperature": 80
   }'
 ```
@@ -370,7 +370,7 @@ curl -X PUT https://sale-chatbot-be.tuanngoanbaoai.workers.dev/api/ai/1 \
   -H "Cookie: auth_token=your-session-token" \
   -d '{
     "temperature": 90,
-    "max_tokens": 6000
+    "maxTokens": 6000
   }'
 ```
 
@@ -398,9 +398,9 @@ curl -X DELETE https://sale-chatbot-be.tuanngoanbaoai.workers.dev/api/ai/1 \
 
 ### Performance Optimization
 
-1. **Sử dụng knowledge_source_group_id**: Giới hạn phạm vi tìm kiếm để tăng tốc độ
-2. **Điều chỉnh top_k**: Giảm để tăng tốc độ, tăng để có nhiều lựa chọn hơn
-3. **Tối ưu system_prompt**: Ngắn gọn nhưng đầy đủ thông tin
+1. **Sử dụng knowledgeSourceGroupId**: Giới hạn phạm vi tìm kiếm để tăng tốc độ
+2. **Điều chỉnh topK**: Giảm để tăng tốc độ, tăng để có nhiều lựa chọn hơn
+3. **Tối ưu systemPrompt**: Ngắn gọn nhưng đầy đủ thông tin
 
 ---
 
