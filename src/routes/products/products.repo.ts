@@ -15,11 +15,9 @@ import {
 import { eq, and, or, like, asc, desc, sql, inArray } from "drizzle-orm"
 import {
 	CreateProductGroupBodySchema,
-	CreateProductBodySchema,
 	ProductGroupParamSchema,
 	ProductParamSchema,
 	UpdateProductGroupBodySchema,
-	UpdateProductBodySchema,
 } from "./products.schema"
 
 export const getProductGroups = async (
@@ -581,7 +579,7 @@ export const updateProduct = async (
 		const imageUrls = productImages.map((img) => img.url)
 		const presignedUrls =
 			imageUrls.length > 0
-				? await generateMultiplePresignedUrls(c, imageUrls)
+				? generateMultiplePresignedUrls(c, imageUrls)
 				: []
 
 		return {
@@ -618,7 +616,39 @@ export const deleteProduct = async (
 		throw new Error("Product not found or doesn't belong to this group")
 	}
 
-	// Delete product images first (foreign key constraint)
+	// Get product images before deleting to clean up R2
+	const productImages = await dbConnection
+		.select({
+			url: productImagesTable.image_url,
+		})
+		.from(productImagesTable)
+		.where(eq(productImagesTable.product_id, productId))
+
+	const imageUrls = productImages.map((img) => img.url)
+
+	// Clean up images from R2 if any exist
+	if (imageUrls.length > 0) {
+		console.log(
+			`🗑️ Deleting ${imageUrls.length} images from R2 for product ${productId}`
+		)
+		try {
+			const cleanupResults = await cleanupOldImages(c, imageUrls, [])
+			console.log(
+				`✅ Cleaned up ${cleanupResults.deleted.length} images from R2`
+			)
+			if (cleanupResults.failed.length > 0) {
+				console.warn(
+					`⚠️ Failed to delete ${cleanupResults.failed.length} images from R2:`,
+					cleanupResults.failed
+				)
+			}
+		} catch (error) {
+			console.error("❌ Error cleaning up images from R2:", error)
+			// Continue with deletion even if R2 cleanup fails
+		}
+	}
+
+	// Delete product images from database (foreign key constraint)
 	await dbConnection
 		.delete(productImagesTable)
 		.where(eq(productImagesTable.product_id, productId))
