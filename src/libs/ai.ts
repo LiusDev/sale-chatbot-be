@@ -37,37 +37,25 @@ export function normalizeTemperature(temp: number): number {
 // Create enhanced system prompt for Agentic RAG
 function createAgenticSystemPrompt(basePrompt: string): string {
 	let enhancedPrompt = basePrompt
+	// Emphasize tool selection policy: prefer semantic search first
+	enhancedPrompt += `
 
-	enhancedPrompt += `\n\nBạn là một trợ lý AI thông minh chuyên về tư vấn sản phẩm. Bạn có khả năng tìm kiếm và truy xuất thông tin sản phẩm một cách chính xác để hỗ trợ khách hàng.
+CHIẾN LƯỢC CHỌN CÔNG CỤ (RẤT QUAN TRỌNG):
+1) ƯU TIÊN semanticSearchTool trước trong các trường hợp sau:
+- Câu hỏi mô tả tự nhiên, không có con số/điều kiện rõ ràng
+- Yêu cầu gợi ý, so sánh tổng quát ("loại nào tốt", "phù hợp để…")
+- Người dùng chưa biết chính xác tên sản phẩm
 
-Khi khách hàng hỏi về sản phẩm, bạn sẽ:
+2) Chỉ dùng sqlQueryTool khi người dùng nêu rõ điều kiện có cấu trúc:
+- Khoảng giá (từ X đến Y), giá chính xác (giá = X), so sánh giá (<, >)
+- Lọc theo metadata cụ thể (key/value), tên sản phẩm chính xác/chuỗi con
+- Cần sắp xếp/giới hạn có cấu trúc theo tiêu chí rõ ràng
 
-📋 **Đối với câu hỏi cụ thể về giá cả:**
-- Tìm kiếm theo khoảng giá khi khách hỏi "từ X đến Y"
-- Tìm kiếm giá chính xác khi khách hỏi "giá X" 
-- So sánh giá khi khách hỏi "rẻ hơn X" hoặc "đắt hơn Y"
+3) Khi phân vân: hãy thử semanticSearchTool trước; nếu không có kết quả phù hợp, chuyển sang sqlQueryTool.
 
-🔍 **Đối với câu hỏi về tên sản phẩm:**
-- Tìm kiếm chính xác khi khách đưa ra tên cụ thể
-- Lọc theo nhóm sản phẩm khi cần thiết
-- Tìm theo thuộc tính đặc biệt
+4) Khi đã có sản phẩm cụ thể cần chi tiết ảnh/mô tả: dùng productDetailsTool.
 
-🎯 **Đối với mô tả tổng quát:**
-- Sử dụng tìm kiếm thông minh cho các yêu cầu như "laptop gaming tốt", "điện thoại pin khủng"
-- Hiểu ngữ cảnh và đưa ra gợi ý phù hợp
-
-📝 **Đối với thông tin chi tiết:**
-- Cung cấp đầy đủ thông tin khi khách hỏi về sản phẩm cụ thể
-- Bao gồm giá cả, mô tả, hình ảnh nếu có
-
-NGUYÊN TẮC HOẠT ĐỘNG:
-✅ Luôn tìm kiếm thông tin thực tế từ cơ sở dữ liệu
-✅ Chỉ cung cấp thông tin chính xác dựa trên kết quả tìm kiếm  
-✅ Thông báo rõ ràng nếu không tìm thấy sản phẩm phù hợp
-✅ Giải thích ngắn gọn về cách tìm kiếm
-✅ Trả lời bằng tiếng Việt tự nhiên và thân thiện
-❌ Không bao giờ tự tạo ra thông tin sản phẩm không có thật`
-
+5) Tuyệt đối không đề cập đến công cụ nào đã dùng trong câu trả lời.`
 	return enhancedPrompt
 }
 
@@ -125,8 +113,8 @@ async function presignProductImages(c: Context<AppContext>, products: any[]) {
 // Shared function to create tools for an agent
 function createAgentTools(c: Context<AppContext>, groupId: number) {
 	return {
-		sqlQueryTool: createSQLQueryTool(c, groupId),
 		semanticSearchTool: createSemanticSearchTool(c, groupId),
+		sqlQueryTool: createSQLQueryTool(c, groupId),
 		productDetailsTool: createProductDetailsTool(c, groupId),
 	}
 }
@@ -178,7 +166,7 @@ async function prepareAIConfig(
 export const createSQLQueryTool = (c: Context<AppContext>, groupId: number) =>
 	tool({
 		description:
-			"Tìm kiếm sản phẩm bằng các truy vấn có cấu trúc với Drizzle ORM. SỬ DỤNG KHI: người dùng hỏi về giá cả cụ thể, khoảng giá, tên sản phẩm, hoặc lọc theo tiêu chí rõ ràng.",
+			"Tìm kiếm sản phẩm bằng các truy vấn có cấu trúc với Drizzle ORM. SỬ DỤNG KHI: người dùng hỏi về giá cả cụ thể, khoảng giá, hoặc lọc theo tiêu chí rõ ràng.",
 		inputSchema: z.object({
 			queryType: z
 				.enum([
