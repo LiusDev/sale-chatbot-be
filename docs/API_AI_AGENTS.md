@@ -299,18 +299,17 @@ Xóa một AI Agent.
 
 ### Knowledge Source Groups
 
-AI Agent có thể được liên kết với một nhóm sản phẩm cụ thể để giới hạn phạm vi tìm kiếm:
+AI Agent được liên kết với một nhóm sản phẩm cụ thể để giới hạn phạm vi tìm kiếm:
 
--   **Không set `knowledge_source_group_id`**: Agent có thể truy cập tất cả sản phẩm
 -   **Set `knowledge_source_group_id`**: Agent chỉ tìm kiếm trong nhóm sản phẩm được chỉ định
 
 ### AI Agent Tools
 
 Mỗi AI Agent được trang bị 3 công cụ chính:
 
-1. **Structured Query Tool**: Tìm kiếm sản phẩm theo tiêu chí cụ thể (giá, tên, metadata)
-2. **Semantic Search Tool**: Tìm kiếm bằng ngôn ngữ tự nhiên và độ tương đồng ngữ nghĩa
-3. **Product Details Tool**: Lấy thông tin chi tiết về sản phẩm cụ thể
+1. **Structured Query Tool**: Tìm kiếm sản phẩm theo tiêu chí cụ thể (giá, tên, metadata) - sqlQueryTool
+2. **Semantic Search Tool**: Tìm kiếm bằng ngôn ngữ tự nhiên và độ tương đồng ngữ nghĩa - semanticSearchTool
+3. **Product Details Tool**: Lấy thông tin chi tiết về sản phẩm cụ thể - productDetailsTool
 
 ---
 

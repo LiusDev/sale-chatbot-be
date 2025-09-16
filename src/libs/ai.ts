@@ -1,6 +1,13 @@
 import { Context } from "hono"
 import { AppContext } from "../types/env"
-import { generateText, stepCountIs, streamText, tool } from "ai"
+import {
+	convertToModelMessages,
+	generateText,
+	stepCountIs,
+	streamText,
+	tool,
+	UIMessage,
+} from "ai"
 import { z } from "zod"
 import { searchSimilarProducts } from "./vectorize"
 import { db } from "./db"
@@ -659,8 +666,7 @@ export async function generateAIResponse(
 	{
 		model,
 		systemPrompt,
-		userMessage,
-		conversationHistory = [],
+		messages: inputMessages = [],
 		temperature = 70,
 		maxTokens = 5000,
 		knowledgeSourceGroupId,
@@ -669,11 +675,7 @@ export async function generateAIResponse(
 	}: {
 		model: AIModel
 		systemPrompt: string
-		userMessage: string
-		conversationHistory?: Array<{
-			role: "user" | "assistant"
-			content: string
-		}>
+		messages: UIMessage[]
 		temperature?: number
 		maxTokens?: number
 		knowledgeSourceGroupId?: number
@@ -692,8 +694,7 @@ export async function generateAIResponse(
 		// Build messages array
 		const messages = [
 			{ role: "system" as const, content: enhancedPrompt },
-			...conversationHistory,
-			{ role: "user" as const, content: userMessage },
+			...convertToModelMessages(inputMessages),
 		]
 
 		// Use AI SDK with provider and tools
@@ -723,8 +724,7 @@ export async function streamAIResponse(
 	{
 		model,
 		systemPrompt,
-		userMessage,
-		conversationHistory = [],
+		messages: inputMessages = [],
 		temperature = 70,
 		maxTokens = 5000,
 		knowledgeSourceGroupId,
@@ -733,11 +733,7 @@ export async function streamAIResponse(
 	}: {
 		model: AIModel
 		systemPrompt: string
-		userMessage: string
-		conversationHistory?: Array<{
-			role: "user" | "assistant"
-			content: string
-		}>
+		messages: UIMessage[]
 		temperature?: number
 		maxTokens?: number
 		knowledgeSourceGroupId?: number
@@ -756,8 +752,7 @@ export async function streamAIResponse(
 		// Build messages array
 		const messages = [
 			{ role: "system" as const, content: enhancedPrompt },
-			...conversationHistory,
-			{ role: "user" as const, content: userMessage },
+			...convertToModelMessages(inputMessages),
 		]
 
 		// Use AI SDK streaming with provider and tools

@@ -187,7 +187,7 @@ ai.post(
 	async (c) => {
 		try {
 			const { agentId } = c.req.valid("param")
-			const { message, stream, conversationHistory } = c.req.valid("json")
+			const { stream, messages } = c.req.valid("json")
 
 			// Get agent configuration
 			const agent = await getAgentById(c, { agentId })
@@ -203,8 +203,7 @@ ai.post(
 				const aiStream = await streamAIResponse(c, {
 					model: agent.model as any,
 					systemPrompt: agent.system_prompt,
-					userMessage: message,
-					conversationHistory,
+					messages,
 					temperature: agent.temperature,
 					maxTokens: agent.max_tokens,
 					knowledgeSourceGroupId:
@@ -220,8 +219,7 @@ ai.post(
 				const result = await generateAIResponse(c, {
 					model: agent.model as any,
 					systemPrompt: agent.system_prompt,
-					userMessage: message,
-					conversationHistory,
+					messages,
 					temperature: agent.temperature,
 					maxTokens: agent.max_tokens,
 					knowledgeSourceGroupId:
@@ -251,8 +249,7 @@ ai.post(
 	async (c) => {
 		try {
 			const { agentId } = c.req.valid("param")
-			const { message, stream, conversationHistory, customConfig } =
-				c.req.valid("json")
+			const { messages, stream, customConfig } = c.req.valid("json")
 
 			// Get agent configuration
 			const agent = await getAgentById(c, { agentId })
@@ -280,8 +277,7 @@ ai.post(
 				// Stream response using AI SDK
 				const aiStream = await streamAIResponse(c, {
 					...config,
-					userMessage: message,
-					conversationHistory,
+					messages,
 					groupId: agent.knowledge_source_group_id,
 				})
 
@@ -291,15 +287,11 @@ ai.post(
 				// Non-stream response with Agentic RAG
 				const result = await generateAIResponse(c, {
 					...config,
-					userMessage: message,
-					conversationHistory,
+					messages,
 					groupId: agent.knowledge_source_group_id,
 				})
 
-				return response(c, {
-					...result,
-					config: config, // Include config used
-				})
+				return c.json(result)
 			}
 		} catch (err: any) {
 			console.error("Error in POST /ai/:agentId/playground:", err.message)

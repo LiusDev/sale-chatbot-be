@@ -1,5 +1,7 @@
 import z from "zod"
 import { AI_MODELS } from "../../types/ai"
+import { UIMessage } from "ai"
+import { uiMessageSchema } from "./ui-message.schema"
 
 // Base schemas
 export const aiAgentParamSchema = z.object({
@@ -26,32 +28,13 @@ export type UpdateAgentBodySchema = z.infer<typeof updateAgentBodySchema>
 
 // Chat request schema
 export const chatRequestSchema = z.object({
-	message: z.string().min(1, "Message is required"),
 	stream: z.boolean().default(false),
-	conversationHistory: z
-		.array(
-			z.object({
-				role: z.enum(["user", "assistant"]),
-				content: z.string(),
-			})
-		)
-		.optional(),
+	messages: uiMessageSchema.array(),
 })
 export type ChatRequestSchema = z.infer<typeof chatRequestSchema>
 
-// Playground request schema (allows custom config override)
-export const playgroundRequestSchema = z.object({
-	message: z.string().min(1, "Message is required"),
-	stream: z.boolean().default(false),
-	conversationHistory: z
-		.array(
-			z.object({
-				role: z.enum(["user", "assistant"]),
-				content: z.string(),
-			})
-		)
-		.optional(),
-	// Custom overrides for playground
+// Playground request schema (extends chat request with custom config override)
+export const playgroundRequestSchema = chatRequestSchema.extend({
 	customConfig: z
 		.object({
 			model: z.enum(AI_MODELS).optional(),
