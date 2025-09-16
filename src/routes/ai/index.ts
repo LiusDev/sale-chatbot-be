@@ -282,7 +282,7 @@ ai.post(
 				})
 
 				// Return the stream response using AI SDK's built-in method
-				return aiStream.toTextStreamResponse()
+				return aiStream.toUIMessageStreamResponse()
 			} else {
 				// Non-stream response with Agentic RAG
 				const result = await generateAIResponse(c, {
