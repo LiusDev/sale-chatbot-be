@@ -49,10 +49,10 @@ const verifyMetaSignature = async (c: Context, next: Next) => {
 	await next()
 }
 
-meta.post("/webhook", verifyMetaSignature, async (c) => {
+meta.post("/webhook", async (c) => {
 	const body = await c.req.json()
 	console.log(body)
-	return c.json({ message: "Webhook received" })
+	return c.json({ message: "Webhook received" }, 200)
 })
 
 meta.get("/webhook", async (c) => {
