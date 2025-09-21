@@ -9,7 +9,7 @@ meta.post("/webhook", async (c) => {
 	return c.json({ message: "Webhook received" })
 })
 
-meta.post("/verify", async (c) => {
+meta.get("/verify", async (c) => {
 	const mode = c.req.query("hub.mode")
 	const challenge = c.req.query("hub.challenge")
 	const verifyToken = c.req.query("hub.verify_token")
