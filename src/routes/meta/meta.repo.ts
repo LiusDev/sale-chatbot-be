@@ -6,7 +6,7 @@ import {
 	metaPages,
 } from "../../libs/schema"
 import { AppContext } from "../../types/env"
-import { eq } from "drizzle-orm"
+import { desc, eq } from "drizzle-orm"
 import { Context } from "hono"
 import { MetaPageSchema } from "./meta.schema"
 import { MetaPageConversation } from "../../types/meta"
@@ -105,10 +105,17 @@ export const syncPageConversations = async (
 		.where(eq(metaPageConversations.page_id, pageId))
 
 	// Step 1: Batch insert all conversations first
-	const conversationValues = conversations.map((conversation) => ({
-		id: conversation.id,
-		page_id: pageId,
-	}))
+	const conversationValues = conversations.map((conversation) => {
+		const recipient = conversation.participants.data.filter(
+			(participant) => participant.id !== pageId
+		)[0]
+		return {
+			id: conversation.id,
+			page_id: pageId,
+			recipientId: recipient?.id || "",
+			recipientName: recipient?.name || "",
+		}
+	})
 
 	const conversationResults = await dbConnection
 		.insert(metaPageConversations)
@@ -190,10 +197,12 @@ export const getConversationMessages = async (
 	{ pageId, conversationId }: { pageId: string; conversationId: string }
 ) => {
 	const dbConnection = db(c.env)
+	// sort by created_time descending
 	const messages = await dbConnection
 		.select()
 		.from(metaPageConversationMessages)
 		.where(eq(metaPageConversationMessages.conversation_id, conversationId))
+		.orderBy(desc(metaPageConversationMessages.created_time))
 	return messages
 }
 

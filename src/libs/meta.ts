@@ -115,7 +115,7 @@ export const sendMessageToMeta = async (
 				body: null,
 				searchParams: new URLSearchParams({
 					recipient: `{id: ${recipientId}}`,
-					message: `{text: ${message}}`,
+					message: `{text: '${message}'}`,
 					message_type: "RESPONSE",
 					access_token: pageAccessToken,
 				}),

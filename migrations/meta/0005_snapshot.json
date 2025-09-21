@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1d467bc9-c4f1-4c29-9c70-baeae971b9f5",
+  "id": "db0fb277-01a5-491c-ab21-12ed0a421b3c",
   "prevId": "8b108656-394c-4392-be05-0bf4d0a4591d",
   "tables": {
     "ai_agents": {
@@ -238,8 +238,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "agentMode": {
-          "name": "agentMode",
+        "agentmode": {
+          "name": "agentmode",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -248,6 +248,13 @@
         },
         "recipientId": {
           "name": "recipientId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recipientName": {
+          "name": "recipientName",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

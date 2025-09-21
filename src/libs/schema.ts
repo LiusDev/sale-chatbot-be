@@ -63,8 +63,9 @@ export const metaPageConversations = sqliteTable("meta_page_conversations", {
 	page_id: text()
 		.notNull()
 		.references(() => metaPages.id, { onDelete: "cascade" }),
-	agentMode: text().notNull().default("auto"),
+	agentmode: text().notNull().default("auto"),
 	recipientId: text(),
+	recipientName: text(),
 	isConfirmOrder: int({ mode: "boolean" }).notNull().default(false),
 })
 

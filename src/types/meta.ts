@@ -44,11 +44,11 @@ export interface MetaPageConversationMessage {
 
 export interface MetaPageConversation {
 	id: string
-	// participants: {
-	// 	data: {
-	// 		id: string
-	// 		name: string
-	// 	}[]
-	// }
+	participants: {
+		data: {
+			id: string
+			name: string
+		}[]
+	}
 	messages?: MetaListResponse<MetaPageConversationMessage>
 }

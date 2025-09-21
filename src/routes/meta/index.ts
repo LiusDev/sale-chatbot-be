@@ -214,6 +214,9 @@ meta.post(
 				})
 			}
 			const recipientId = conversation.recipientId!
+			console.log("pageAccessToken", page.access_token)
+			console.log("recipientId", recipientId)
+
 			const metaResponse = await sendMessageToMeta(c, {
 				pageId,
 				recipientId,
@@ -223,11 +226,12 @@ meta.post(
 			await saveMessageToDatabase(c, {
 				messageId: metaResponse.message_id,
 				conversationId,
-				createdTime: new Date().toISOString(),
+				// convert to utc timezone
+				createdTime: new Date().toUTCString(),
 				message,
 				from: {
-					id: page.id,
 					name: page.name,
+					id: page.id,
 				},
 			})
 			return response(c, response)
