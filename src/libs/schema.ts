@@ -55,10 +55,8 @@ export const commonAppInfo = sqliteTable("common_app_info", {
 
 export const metaPages = sqliteTable("meta_pages", {
 	id: int().primaryKey({ autoIncrement: true }),
-	page_id: text().notNull(),
+	page_id: text().notNull().unique(),
 	name: text().notNull(),
 	access_token: text(),
 	category: text(),
-	created_at: text().default("CURRENT_TIMESTAMP"),
-	updated_at: text().default("CURRENT_TIMESTAMP"),
 })

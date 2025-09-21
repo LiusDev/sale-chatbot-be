@@ -54,12 +54,11 @@ export const upsertMetaPages = async (
 					category: page.category,
 				})
 				.onConflictDoUpdate({
-					target: [metaPages.page_id],
+					target: metaPages.page_id,
 					set: {
 						name: page.name,
 						access_token: page.accessToken,
 						category: page.category,
-						updated_at: new Date().toISOString(),
 					},
 				})
 				.returning()
