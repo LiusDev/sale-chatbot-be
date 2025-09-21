@@ -35,15 +35,13 @@ export const aiAgents = sqliteTable("ai_agents", {
 	id: int().primaryKey({ autoIncrement: true }),
 	name: text().notNull(),
 	description: text().default(""),
-	model: text().notNull(), // @cf/openai/gpt-oss-120b or @cf/meta/llama-3.3-70b-instruct-fp8-fast
+	model: text().notNull(),
 	system_prompt: text().notNull(),
 	knowledge_source_group_id: int().references(() => productGroups.id),
 	top_k: int().notNull().default(5),
 	temperature: int().notNull().default(70), // 0-100, will be converted to 0.0-1.0
 	max_tokens: int().notNull().default(1000),
 	created_by: int().references(() => systemUsers.id),
-	created_at: text().default("CURRENT_TIMESTAMP"),
-	updated_at: text().default("CURRENT_TIMESTAMP"),
 })
 
 export const commonAppInfo = sqliteTable("common_app_info", {
@@ -54,20 +52,17 @@ export const commonAppInfo = sqliteTable("common_app_info", {
 })
 
 export const metaPages = sqliteTable("meta_pages", {
-	id: int().primaryKey({ autoIncrement: true }),
-	page_id: text().notNull().unique(),
+	id: text().primaryKey(),
 	name: text().notNull(),
 	access_token: text(),
 	category: text(),
 })
 
 export const metaPageConversations = sqliteTable("meta_page_conversations", {
-	id: int().primaryKey({ autoIncrement: true }),
+	id: text().primaryKey(),
 	page_id: text()
 		.notNull()
-		.references(() => metaPages.page_id),
-	conversation_id: text().notNull(),
-	// participants: text().notNull(),
+		.references(() => metaPages.id, { onDelete: "cascade" }),
 	agentMode: text().notNull().default("auto"),
 	isConfirmOrder: int({ mode: "boolean" }).notNull().default(false),
 })
@@ -75,10 +70,12 @@ export const metaPageConversations = sqliteTable("meta_page_conversations", {
 export const metaPageConversationMessages = sqliteTable(
 	"meta_page_conversation_messages",
 	{
-		id: int().primaryKey({ autoIncrement: true }),
+		id: text().primaryKey(),
 		conversation_id: text()
 			.notNull()
-			.references(() => metaPageConversations.conversation_id),
+			.references(() => metaPageConversations.id, {
+				onDelete: "cascade",
+			}),
 		created_time: text().notNull(),
 		message_id: text().notNull(),
 		message: text().notNull(),

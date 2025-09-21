@@ -6,13 +6,14 @@ import {
 	getMetaAccessToken,
 	getMetaPages,
 	getMetaWebhookVerifyKey,
-	initPageConversations,
+	getPageById,
+	syncPageConversations,
 	upsertMetaPages,
 } from "./meta.repo"
 import { getFanpagesFromMeta, getMetaPageConversations } from "../../libs/meta"
 import { listResponse, response } from "../../utils/response"
 import { zValidator } from "@hono/zod-validator"
-import { metaPageSchema } from "./meta.schema"
+import { metaPageSchema, pageIdParamSchema } from "./meta.schema"
 import { error } from "../../utils/error"
 
 const meta = new Hono<AppContext>()
@@ -97,19 +98,6 @@ meta.patch("/pages", zValidator("json", metaPageSchema), async (c) => {
 		const pages = c.req.valid("json")
 		const result = await upsertMetaPages(c, pages)
 
-		// Get initial conversations of each page from Meta API
-		for (const page of result) {
-			const conversations = await getMetaPageConversations(c, {
-				pageId: page.page_id,
-				pageAccessToken: page.access_token!,
-			})
-
-			await initPageConversations(c, {
-				pageId: page.page_id,
-				conversations: conversations.data,
-			})
-		}
-
 		return response(c, result)
 	} catch (err) {
 		console.error("Error upserting pages:", err)
@@ -119,6 +107,33 @@ meta.patch("/pages", zValidator("json", metaPageSchema), async (c) => {
 		})
 	}
 })
+
+// sync page conversations
+meta.patch(
+	"/pages/:pageId/sync",
+	zValidator("param", pageIdParamSchema),
+	async (c) => {
+		try {
+			const { pageId } = c.req.valid("param")
+			const page = await getPageById(c, pageId)
+			const metaConversations = await getMetaPageConversations(c, {
+				pageId,
+				pageAccessToken: page.access_token!,
+			})
+			const result = await syncPageConversations(c, {
+				pageId,
+				conversations: metaConversations.data,
+			})
+			return response(c, result)
+		} catch (err) {
+			console.error("Error syncing page conversations:", err)
+			return error(c, {
+				message: "Failed to sync page conversations",
+				status: 500,
+			})
+		}
+	}
+)
 
 meta.delete("/pages/:pageId", async (c) => {
 	try {

@@ -11,3 +11,9 @@ export const metaPageSchema = z
 	.min(1, "At least one page is required")
 
 export type MetaPageSchema = z.infer<typeof metaPageSchema>
+
+export const pageIdParamSchema = z.object({
+	pageId: z.string().min(1, "Page ID is required"),
+})
+
+export type PageIdParamSchema = z.infer<typeof pageIdParamSchema>

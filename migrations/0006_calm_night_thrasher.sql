@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX `meta_pages_page_id_unique` ON `meta_pages` (`page_id`);

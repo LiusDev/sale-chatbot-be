@@ -54,13 +54,13 @@ export const upsertMetaPages = async (
 			const result = await dbConnection
 				.insert(metaPages)
 				.values({
-					page_id: page.id,
+					id: page.id,
 					name: page.name,
 					access_token: page.accessToken,
 					category: page.category,
 				})
 				.onConflictDoUpdate({
-					target: metaPages.page_id,
+					target: metaPages.id,
 					set: {
 						name: page.name,
 						access_token: page.accessToken,
@@ -78,7 +78,16 @@ export const upsertMetaPages = async (
 	return results
 }
 
-export const initPageConversations = async (
+export const getPageById = async (c: Context<AppContext>, pageId: string) => {
+	const dbConnection = db(c.env)
+	const page = await dbConnection
+		.select()
+		.from(metaPages)
+		.where(eq(metaPages.id, pageId))
+	return page[0]
+}
+
+export const syncPageConversations = async (
 	c: Context<AppContext>,
 	{
 		pageId,
@@ -89,22 +98,59 @@ export const initPageConversations = async (
 	}
 ) => {
 	const dbConnection = db(c.env)
+
+	// Step 0: Delete all conversations of this page
+	await dbConnection
+		.delete(metaPageConversations)
+		.where(eq(metaPageConversations.page_id, pageId))
+
+	// Step 1: Batch insert all conversations first
+	const conversationValues = conversations.map((conversation) => ({
+		id: conversation.id,
+		page_id: pageId,
+	}))
+
+	const conversationResults = await dbConnection
+		.insert(metaPageConversations)
+		.values(conversationValues)
+		.returning()
+
+	// Step 2: Loop through each conversation and batch insert its messages in chunks
 	for (const conversation of conversations) {
-		await dbConnection.insert(metaPageConversations).values({
-			page_id: pageId,
-			conversation_id: conversation.id,
-		})
-		for (const message of conversation.messages?.data || []) {
-			await dbConnection.insert(metaPageConversationMessages).values({
-				conversation_id: conversation.id,
-				message_id: message.id,
-				message: message.message,
-				from: message.from,
-				attachments: message.attachments,
-				created_time: message.created_time,
-			})
+		if (
+			conversation.messages?.data &&
+			conversation.messages.data.length > 0
+		) {
+			const messagesToInsert = conversation.messages.data.map(
+				(message) => ({
+					id: message.id,
+					conversation_id: conversation.id,
+					created_time: message.created_time,
+					message_id: message.id,
+					message: message.message,
+					from: JSON.stringify(message.from),
+					attachments: message.attachments
+						? JSON.stringify(message.attachments)
+						: null,
+				})
+			)
+
+			// Split messages into chunks of 10
+			const chunkSize = 10
+			for (let i = 0; i < messagesToInsert.length; i += chunkSize) {
+				const chunk = messagesToInsert.slice(i, i + chunkSize)
+
+				// Batch insert this chunk of messages
+				await dbConnection.batch([
+					dbConnection
+						.insert(metaPageConversationMessages)
+						.values(chunk),
+				] as any)
+			}
 		}
 	}
+
+	return conversationResults
 }
 
 export const deleteMetaPage = async (
@@ -112,5 +158,5 @@ export const deleteMetaPage = async (
 	pageId: string
 ) => {
 	const dbConnection = db(c.env)
-	await dbConnection.delete(metaPages).where(eq(metaPages.page_id, pageId))
+	await dbConnection.delete(metaPages).where(eq(metaPages.id, pageId))
 }
