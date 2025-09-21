@@ -17,3 +17,19 @@ export const pageIdParamSchema = z.object({
 })
 
 export type PageIdParamSchema = z.infer<typeof pageIdParamSchema>
+
+export const conversationIdParamSchema = z.object({
+	conversationId: z.string().min(1, "Conversation ID is required"),
+})
+
+export type ConversationIdParamSchema = z.infer<
+	typeof conversationIdParamSchema
+>
+
+export const paramsSchema = pageIdParamSchema.extend(
+	conversationIdParamSchema.shape
+)
+
+export const sendMessageSchema = z.object({
+	message: z.string().min(1, "Message is required"),
+})

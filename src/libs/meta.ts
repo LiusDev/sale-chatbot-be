@@ -82,3 +82,50 @@ export const getMetaPageConversations = async (
 		)
 	}
 }
+
+export const sendMessageToMeta = async (
+	c: Context<AppContext>,
+	{
+		pageId,
+		pageAccessToken,
+		recipientId,
+		message,
+	}: {
+		pageId: string
+		pageAccessToken: string
+		recipientId: string
+		message: string
+	}
+) => {
+	if (!pageId) {
+		throw new Error(
+			"Meta page ID not found. Please configure pageId in app settings."
+		)
+	}
+
+	if (!pageAccessToken) {
+		throw new Error(
+			"Meta page access token not found. Please configure pageAccessToken in app settings."
+		)
+	}
+
+	try {
+		const response = await metaBaseAPI(pageAccessToken)
+			.post(`${pageId}/messages`, {
+				body: null,
+				searchParams: new URLSearchParams({
+					recipient: `{id: ${recipientId}}`,
+					message: `{text: ${message}}`,
+					message_type: "RESPONSE",
+					access_token: pageAccessToken,
+				}),
+			})
+			.json<{ recipient_id: string; message_id: string }>()
+		return response
+	} catch (error) {
+		console.error("Error sending message to Meta API:", error)
+		throw new Error(
+			"Failed to send message to Meta. Please check your page access token and try again."
+		)
+	}
+}

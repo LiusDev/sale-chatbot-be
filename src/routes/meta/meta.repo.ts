@@ -160,3 +160,68 @@ export const deleteMetaPage = async (
 	const dbConnection = db(c.env)
 	await dbConnection.delete(metaPages).where(eq(metaPages.id, pageId))
 }
+
+export const getPageConversations = async (
+	c: Context<AppContext>,
+	{ pageId }: { pageId: string }
+) => {
+	const dbConnection = db(c.env)
+	const conversations = await dbConnection
+		.select()
+		.from(metaPageConversations)
+		.where(eq(metaPageConversations.page_id, pageId))
+	return conversations
+}
+
+export const getConversationById = async (
+	c: Context<AppContext>,
+	{ pageId, conversationId }: { pageId: string; conversationId: string }
+) => {
+	const dbConnection = db(c.env)
+	const conversation = await dbConnection
+		.select()
+		.from(metaPageConversations)
+		.where(eq(metaPageConversations.page_id, pageId))
+	return conversation[0]
+}
+
+export const getConversationMessages = async (
+	c: Context<AppContext>,
+	{ pageId, conversationId }: { pageId: string; conversationId: string }
+) => {
+	const dbConnection = db(c.env)
+	const messages = await dbConnection
+		.select()
+		.from(metaPageConversationMessages)
+		.where(eq(metaPageConversationMessages.conversation_id, conversationId))
+	return messages
+}
+
+export const saveMessageToDatabase = async (
+	c: Context<AppContext>,
+	{
+		messageId,
+		conversationId,
+		createdTime,
+		message,
+		from,
+		attachments,
+	}: {
+		messageId: string
+		conversationId: string
+		createdTime: string
+		message: string
+		from: Record<string, string>
+		attachments?: Record<string, string>
+	}
+) => {
+	const dbConnection = db(c.env)
+	await dbConnection.insert(metaPageConversationMessages).values({
+		id: messageId,
+		conversation_id: conversationId,
+		created_time: createdTime,
+		message: message,
+		from: JSON.stringify(from),
+		attachments: attachments ? JSON.stringify(attachments) : null,
+	})
+}

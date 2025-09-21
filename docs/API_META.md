@@ -130,7 +130,60 @@ Lấy danh sách các trang đã được lưu trữ trong database. Đây là d
 
 Thêm mới hoặc cập nhật thông tin các trang Meta vào database. Nếu trang đã tồn tại (dựa trên page_id), sẽ cập nhật thông tin. Nếu chưa tồn tại, sẽ tạo mới.
 
-### 4. Delete Meta Page
+### 4. Sync Page Conversations
+
+**PATCH** `/meta/pages/:pageId/sync`
+
+Đồng bộ hóa tất cả conversations và messages của một trang Meta từ Meta API vào database. Endpoint này sẽ:
+
+1. Xóa tất cả conversations cũ của trang
+2. Lấy danh sách conversations mới từ Meta API
+3. Insert conversations và messages vào database
+
+#### Path Parameters
+
+| Parameter | Type   | Required | Description  |
+| --------- | ------ | -------- | ------------ |
+| `pageId`  | string | ✅       | Meta Page ID |
+
+#### Response
+
+```json
+{
+	"success": true,
+	"data": [
+		{
+			"id": "t_123456789012345",
+			"page_id": "123456789012345",
+			"agentMode": "auto",
+			"isConfirmOrder": false
+		}
+	]
+}
+```
+
+#### Response Fields
+
+| Field            | Type    | Description               |
+| ---------------- | ------- | ------------------------- |
+| `id`             | string  | Conversation ID           |
+| `page_id`        | string  | Meta Page ID              |
+| `agentMode`      | string  | Agent mode (auto/manual)  |
+| `isConfirmOrder` | boolean | Order confirmation status |
+
+#### Error Responses
+
+```json
+{
+	"success": false,
+	"error": {
+		"message": "Failed to sync page conversations",
+		"status": 500
+	}
+}
+```
+
+### 5. Delete Meta Page
 
 **DELETE** `/meta/pages/:pageId`
 
@@ -138,9 +191,9 @@ Xóa một trang Meta khỏi database dựa trên page_id.
 
 #### Path Parameters
 
-| Parameter | Type   | Required | Description    |
-| --------- | ------ | -------- | -------------- |
-| `pageId`  | string | ✅       | Meta Page ID   |
+| Parameter | Type   | Required | Description  |
+| --------- | ------ | -------- | ------------ |
+| `pageId`  | string | ✅       | Meta Page ID |
 
 #### Response
 
@@ -171,13 +224,35 @@ Xóa một trang Meta khỏi database dựa trên page_id.
 
 ```sql
 CREATE TABLE meta_pages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    page_id TEXT NOT NULL UNIQUE,
+    id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     access_token TEXT,
-    category TEXT,
-    created_at TEXT DEFAULT 'CURRENT_TIMESTAMP',
-    updated_at TEXT DEFAULT 'CURRENT_TIMESTAMP'
+    category TEXT
+);
+```
+
+### Meta Page Conversations Table Schema
+
+```sql
+CREATE TABLE meta_page_conversations (
+    id TEXT PRIMARY KEY,
+    page_id TEXT NOT NULL REFERENCES meta_pages(id) ON DELETE CASCADE,
+    agentMode TEXT NOT NULL DEFAULT 'auto',
+    isConfirmOrder INTEGER NOT NULL DEFAULT 0
+);
+```
+
+### Meta Page Conversation Messages Table Schema
+
+```sql
+CREATE TABLE meta_page_conversation_messages (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL REFERENCES meta_page_conversations(id) ON DELETE CASCADE,
+    created_time TEXT NOT NULL,
+    message_id TEXT NOT NULL,
+    message TEXT NOT NULL,
+    from TEXT NOT NULL, -- JSON string
+    attachments TEXT -- JSON string
 );
 ```
 
@@ -299,6 +374,19 @@ async function syncMetaPages(pages) {
 	return response.json()
 }
 
+// Sync page conversations
+async function syncPageConversations(pageId) {
+	const response = await fetch(`/meta/pages/${pageId}/sync`, {
+		method: "PATCH",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+	})
+
+	return response.json()
+}
+
 // Delete a page from database
 async function deleteMetaPage(pageId) {
 	const response = await fetch(`/meta/pages/${pageId}`, {
@@ -323,6 +411,10 @@ const pagesToSync = fanpages.data.map((page) => ({
 
 const result = await syncMetaPages(pagesToSync)
 console.log("Synced pages:", result.data)
+
+// Example usage: Sync conversations for a page
+const syncResult = await syncPageConversations("123456789012345")
+console.log("Synced conversations:", syncResult.data)
 
 // Example usage: Delete a page
 const deleteResult = await deleteMetaPage("123456789012345")
@@ -353,6 +445,10 @@ curl -X PATCH "https://your-domain.com/meta/pages" \
     }
   ]'
 
+# Sync page conversations
+curl -X PATCH "https://your-domain.com/meta/pages/123456789012345/sync" \
+  -H "Authorization: Bearer your-jwt-token"
+
 # Delete a page
 curl -X DELETE "https://your-domain.com/meta/pages/123456789012345" \
   -H "Authorization: Bearer your-jwt-token"
@@ -375,6 +471,7 @@ curl -X DELETE "https://your-domain.com/meta/pages/123456789012345" \
 -   **Real-time data**: `/meta-pages` endpoint lấy dữ liệu trực tiếp từ Meta API
 -   **Local data**: `/pages` endpoint lấy dữ liệu từ database local
 -   **Sync process**: Sử dụng `/meta/pages` PATCH để đồng bộ dữ liệu
+-   **Conversations sync**: Sử dụng `/meta/pages/:pageId/sync` PATCH để đồng bộ conversations và messages
 -   **Delete process**: Sử dụng `/meta/pages/:pageId` DELETE để xóa trang
 
 ### Access Token Management

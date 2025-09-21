@@ -2,7 +2,6 @@ CREATE TABLE `meta_page_conversation_messages` (
 	`id` text PRIMARY KEY NOT NULL,
 	`conversation_id` text NOT NULL,
 	`created_time` text NOT NULL,
-	`message_id` text NOT NULL,
 	`message` text NOT NULL,
 	`from` text NOT NULL,
 	`attachments` text DEFAULT '',
@@ -13,6 +12,7 @@ CREATE TABLE `meta_page_conversations` (
 	`id` text PRIMARY KEY NOT NULL,
 	`page_id` text NOT NULL,
 	`agentMode` text DEFAULT 'auto' NOT NULL,
+	`recipientId` text,
 	`isConfirmOrder` integer DEFAULT false NOT NULL,
 	FOREIGN KEY (`page_id`) REFERENCES `meta_pages`(`id`) ON UPDATE no action ON DELETE cascade
 );

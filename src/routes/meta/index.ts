@@ -3,17 +3,30 @@ import { AppContext } from "../../types/env"
 import { authMiddleware, metaWebhookVerification } from "../../middlewares"
 import {
 	deleteMetaPage,
+	getConversationById,
+	getConversationMessages,
 	getMetaAccessToken,
 	getMetaPages,
 	getMetaWebhookVerifyKey,
 	getPageById,
+	getPageConversations,
+	saveMessageToDatabase,
 	syncPageConversations,
 	upsertMetaPages,
 } from "./meta.repo"
-import { getFanpagesFromMeta, getMetaPageConversations } from "../../libs/meta"
+import {
+	getFanpagesFromMeta,
+	getMetaPageConversations,
+	sendMessageToMeta,
+} from "../../libs/meta"
 import { listResponse, response } from "../../utils/response"
 import { zValidator } from "@hono/zod-validator"
-import { metaPageSchema, pageIdParamSchema } from "./meta.schema"
+import {
+	metaPageSchema,
+	pageIdParamSchema,
+	paramsSchema,
+	sendMessageSchema,
+} from "./meta.schema"
 import { error } from "../../utils/error"
 
 const meta = new Hono<AppContext>()
@@ -108,6 +121,20 @@ meta.patch("/pages", zValidator("json", metaPageSchema), async (c) => {
 	}
 })
 
+meta.delete("/pages/:pageId", async (c) => {
+	try {
+		const pageId = c.req.param("pageId")
+		const result = await deleteMetaPage(c, pageId)
+		return response(c, result)
+	} catch (err) {
+		console.error("Error deleting page:", err)
+		return error(c, {
+			message: "Failed to delete page",
+			status: 500,
+		})
+	}
+})
+
 // sync page conversations
 meta.patch(
 	"/pages/:pageId/sync",
@@ -135,18 +162,83 @@ meta.patch(
 	}
 )
 
-meta.delete("/pages/:pageId", async (c) => {
-	try {
-		const pageId = c.req.param("pageId")
-		const result = await deleteMetaPage(c, pageId)
-		return response(c, result)
-	} catch (err) {
-		console.error("Error deleting page:", err)
-		return error(c, {
-			message: "Failed to delete page",
-			status: 500,
+// Get conversations of a page
+meta.get(
+	"/pages/:pageId",
+	zValidator("param", pageIdParamSchema),
+	async (c) => {
+		const { pageId } = c.req.valid("param")
+		const conversations = await getPageConversations(c, { pageId })
+		return listResponse(c, conversations, {
+			total: conversations.length,
+			page: 1,
+			limit: 99,
 		})
 	}
-})
+)
+
+meta.get(
+	"/pages/:pageId/:conversationId",
+	zValidator("param", paramsSchema),
+	async (c) => {
+		const { pageId, conversationId } = c.req.valid("param")
+		const conversation = await getConversationMessages(c, {
+			pageId,
+			conversationId,
+		})
+		return listResponse(c, conversation, {
+			total: conversation.length,
+			page: 1,
+			limit: 99,
+		})
+	}
+)
+
+meta.post(
+	"/pages/:pageId/:conversationId",
+	zValidator("param", paramsSchema),
+	zValidator("json", sendMessageSchema),
+	async (c) => {
+		try {
+			const { pageId, conversationId } = c.req.valid("param")
+			const { message } = c.req.valid("json")
+			const page = await getPageById(c, pageId)
+			const conversation = await getConversationById(c, {
+				pageId,
+				conversationId,
+			})
+			if (!conversation) {
+				return error(c, {
+					message: "Conversation not found",
+					status: 404,
+				})
+			}
+			const recipientId = conversation.recipientId!
+			const metaResponse = await sendMessageToMeta(c, {
+				pageId,
+				recipientId,
+				message,
+				pageAccessToken: page.access_token!,
+			})
+			await saveMessageToDatabase(c, {
+				messageId: metaResponse.message_id,
+				conversationId,
+				createdTime: new Date().toISOString(),
+				message,
+				from: {
+					id: page.id,
+					name: page.name,
+				},
+			})
+			return response(c, response)
+		} catch (err) {
+			console.error("Error sending message to Meta:", err)
+			return error(c, {
+				message: "Failed to send message to Meta",
+				status: 500,
+			})
+		}
+	}
+)
 
 export default meta

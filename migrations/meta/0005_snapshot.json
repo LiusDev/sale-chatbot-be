@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "60c0d12c-12df-4e44-b70d-59060c8db7bf",
+  "id": "1d467bc9-c4f1-4c29-9c70-baeae971b9f5",
   "prevId": "8b108656-394c-4392-be05-0bf4d0a4591d",
   "tables": {
     "ai_agents": {
@@ -178,13 +178,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "message_id": {
-          "name": "message_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "message": {
           "name": "message",
           "type": "text",
@@ -252,6 +245,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'auto'"
+        },
+        "recipientId": {
+          "name": "recipientId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "isConfirmOrder": {
           "name": "isConfirmOrder",
