@@ -16,7 +16,7 @@ import {
 	productGroups as productGroupsTable,
 	productImages as productImagesTable,
 } from "./schema"
-import { eq, inArray, like, or, and, sql } from "drizzle-orm"
+import { eq, inArray, like, or, and, sql, asc, desc } from "drizzle-orm"
 import { AIModel } from "../types/ai"
 import { createOpenAI } from "@ai-sdk/openai"
 import { generateMultiplePresignedUrls } from "./r2"
@@ -41,26 +41,43 @@ function createAgenticSystemPrompt(basePrompt: string): string {
 	enhancedPrompt += `
 
 CHIẾN LƯỢC CHỌN CÔNG CỤ (RẤT QUAN TRỌNG):
-1) ƯU TIÊN semanticSearchTool trước trong các trường hợp sau:
+
+1) SỬ DỤNG sqlQueryTool cho các truy vấn có tiêu chí cụ thể:
+- Sắp xếp theo giá: "đắt nhất", "rẻ nhất", "giá cao nhất", "giá thấp nhất"
+- So sánh giá: "dưới X", "trên Y", "từ X đến Y", "giá = X"
+- Lọc theo điều kiện có cấu trúc: metadata cụ thể, tên sản phẩm chính xác
+- Giới hạn số lượng: "top 5", "10 sản phẩm đầu tiên"
+- Sắp xếp theo tiêu chí rõ ràng: "theo giá", "theo tên", "theo ngày"
+
+2) SỬ DỤNG semanticSearchTool cho các truy vấn ngữ nghĩa:
 - Câu hỏi mô tả tự nhiên, không có con số/điều kiện rõ ràng
 - Yêu cầu gợi ý, so sánh tổng quát ("loại nào tốt", "phù hợp để…")
 - Người dùng chưa biết chính xác tên sản phẩm
+- Tìm kiếm theo ý nghĩa, ngữ cảnh, mục đích sử dụng
 
-2) Chỉ dùng sqlQueryTool khi người dùng nêu rõ điều kiện có cấu trúc:
-- Khoảng giá (từ X đến Y), giá chính xác (giá = X), so sánh giá (<, >)
-- Lọc theo metadata cụ thể (key/value), tên sản phẩm chính xác/chuỗi con
-- Cần sắp xếp/giới hạn có cấu trúc theo tiêu chí rõ ràng
+3) Khi đã có sản phẩm cụ thể cần chi tiết ảnh/mô tả: dùng productDetailsTool.
 
-3) Khi phân vân: hãy thử semanticSearchTool trước; nếu không có kết quả phù hợp, chuyển sang sqlQueryTool.
-
-4) Khi đã có sản phẩm cụ thể cần chi tiết ảnh/mô tả: dùng productDetailsTool.
-
-5) Tuyệt đối không đề cập đến công cụ nào đã dùng trong câu trả lời.`
+4) Tuyệt đối không đề cập đến công cụ nào đã dùng trong câu trả lời.`
 	return enhancedPrompt
 }
 
 // Helper function to presign product image URLs
-async function presignProductImages(c: Context<AppContext>, products: any[]) {
+async function presignProductImages(
+	c: Context<AppContext>,
+	products: Array<{
+		id: number
+		name: string
+		description: string | null
+		price: number
+		metadata: string | null
+		product_group_id: number | null
+		images: Array<{
+			url: string
+			altText: string | null
+			index: number
+		}>
+	}>
+) {
 	try {
 		// Extract R2 keys from image URLs and collect them
 		const allImageKeys: string[] = []
@@ -68,7 +85,7 @@ async function presignProductImages(c: Context<AppContext>, products: any[]) {
 
 		products.forEach((product) => {
 			if (product.images && Array.isArray(product.images)) {
-				product.images.forEach((image: any) => {
+				product.images.forEach((image) => {
 					if (image.url) {
 						// Extract R2 key from URL (assuming URL format: https://domain.com/key or just the key)
 						const r2Key = image.url.split("/").pop() || image.url
@@ -80,20 +97,25 @@ async function presignProductImages(c: Context<AppContext>, products: any[]) {
 		})
 
 		// Generate presigned URLs for all images at once
-		const presignedUrls =
+		const presignedUrls: string[] =
 			allImageKeys.length > 0
-				? await generateMultiplePresignedUrls(c, allImageKeys)
-				: {}
+				? generateMultiplePresignedUrls(c, allImageKeys)
+				: []
+
+		// Create a mapping from R2 key to presigned URL
+		const keyToPresignedUrl: Record<string, string> = {}
+		allImageKeys.forEach((key, index) => {
+			keyToPresignedUrl[key] = presignedUrls[index] || key
+		})
 
 		// Update products with presigned URLs
 		return products.map((product) => {
 			if (product.images && Array.isArray(product.images)) {
-				const updatedImages = product.images.map((image: any) => {
+				const updatedImages = product.images.map((image) => {
 					const r2Key = imageKeyMap[image.url]
 					return {
 						...image,
-						presigned_url:
-							(presignedUrls as any)[r2Key] || image.url, // fallback to original URL
+						presigned_url: keyToPresignedUrl[r2Key] || image.url, // fallback to original URL
 					}
 				})
 				return {
@@ -166,7 +188,7 @@ async function prepareAIConfig(
 export const createSQLQueryTool = (c: Context<AppContext>, groupId: number) =>
 	tool({
 		description:
-			"Tìm kiếm sản phẩm bằng các truy vấn có cấu trúc với Drizzle ORM. SỬ DỤNG KHI: người dùng hỏi về giá cả cụ thể, khoảng giá, hoặc lọc theo tiêu chí rõ ràng.",
+			"Tìm kiếm sản phẩm bằng các truy vấn có cấu trúc với Drizzle ORM. SỬ DỤNG KHI: người dùng hỏi về giá cả cụ thể, khoảng giá, sắp xếp theo tiêu chí, hoặc lọc theo điều kiện rõ ràng.",
 		inputSchema: z.object({
 			queryType: z
 				.enum([
@@ -176,6 +198,12 @@ export const createSQLQueryTool = (c: Context<AppContext>, groupId: number) =>
 					"group_products",
 					"price_comparison",
 					"metadata_filter",
+					"sort_by_price_asc",
+					"sort_by_price_desc",
+					"sort_by_name_asc",
+					"sort_by_name_desc",
+					"top_expensive",
+					"top_cheapest",
 				])
 				.describe("Loại truy vấn cần thực hiện"),
 			parameters: z
@@ -199,6 +227,14 @@ export const createSQLQueryTool = (c: Context<AppContext>, groupId: number) =>
 						.number()
 						.default(10)
 						.describe("Số lượng kết quả tối đa"),
+					sortBy: z
+						.enum(["price", "name"])
+						.optional()
+						.describe("Trường để sắp xếp"),
+					sortOrder: z
+						.enum(["asc", "desc"])
+						.optional()
+						.describe("Thứ tự sắp xếp"),
 				})
 				.describe("Tham số cho truy vấn"),
 			reasoning: z
@@ -211,7 +247,17 @@ export const createSQLQueryTool = (c: Context<AppContext>, groupId: number) =>
 			reasoning,
 		}: {
 			queryType: string
-			parameters: any
+			parameters: {
+				minPrice?: number
+				maxPrice?: number
+				exactPrice?: number
+				productName?: string
+				metadataKey?: string
+				metadataValue?: string
+				limit: number
+				sortBy?: "price" | "name"
+				sortOrder?: "asc" | "desc"
+			}
 			reasoning: string
 		}) => {
 			try {
@@ -233,7 +279,7 @@ export const createSQLQueryTool = (c: Context<AppContext>, groupId: number) =>
 						metadata: productsTable.metadata,
 						product_group_id: productsTable.product_group_id,
 					})
-					.from(productsTable) as any
+					.from(productsTable)
 
 				// Apply filters based on query type
 				const conditions = []
@@ -299,6 +345,15 @@ export const createSQLQueryTool = (c: Context<AppContext>, groupId: number) =>
 						}
 						break
 
+					case "sort_by_price_asc":
+					case "sort_by_price_desc":
+					case "sort_by_name_asc":
+					case "sort_by_name_desc":
+					case "top_expensive":
+					case "top_cheapest":
+						// These are pure sorting queries, no additional filters needed
+						break
+
 					default:
 						return {
 							success: false,
@@ -311,19 +366,76 @@ export const createSQLQueryTool = (c: Context<AppContext>, groupId: number) =>
 
 				// Apply conditions if any
 				if (conditions.length > 0) {
-					queryBuilder = queryBuilder.where(and(...conditions))
+					queryBuilder = queryBuilder.where(and(...conditions)) as any
+				}
+
+				// Apply sorting based on query type or parameters
+				if (
+					queryType === "sort_by_price_asc" ||
+					queryType === "top_cheapest"
+				) {
+					queryBuilder = queryBuilder.orderBy(
+						asc(productsTable.price)
+					) as any
+				} else if (
+					queryType === "sort_by_price_desc" ||
+					queryType === "top_expensive"
+				) {
+					queryBuilder = queryBuilder.orderBy(
+						desc(productsTable.price)
+					) as any
+				} else if (queryType === "sort_by_name_asc") {
+					queryBuilder = queryBuilder.orderBy(
+						asc(productsTable.name)
+					) as any
+				} else if (queryType === "sort_by_name_desc") {
+					queryBuilder = queryBuilder.orderBy(
+						desc(productsTable.name)
+					) as any
+				} else if (parameters.sortBy && parameters.sortOrder) {
+					// Generic sorting based on parameters
+					const sortColumn =
+						parameters.sortBy === "price"
+							? productsTable.price
+							: productsTable.name
+
+					if (parameters.sortOrder === "asc") {
+						queryBuilder = queryBuilder.orderBy(
+							asc(sortColumn)
+						) as any
+					} else {
+						queryBuilder = queryBuilder.orderBy(
+							desc(sortColumn)
+						) as any
+					}
 				}
 
 				// Apply limit
-				queryBuilder = queryBuilder.limit(parameters.limit || 10)
+				queryBuilder = queryBuilder.limit(parameters.limit || 10) as any
 
 				// Execute query
 				const results = await queryBuilder
 
 				// Get images for products if any found
-				let productsWithImages = results
+				let productsWithImages: Array<{
+					id: number
+					name: string
+					description: string | null
+					price: number
+					metadata: string | null
+					product_group_id: number | null
+					images: Array<{
+						url: string
+						altText: string | null
+						index: number
+					}>
+				}> = results.map((product) => ({
+					...product,
+					images: [],
+				}))
+
 				if (results.length > 0) {
-					const productIds = results.map((p: any) => p.id)
+					const productIds = results.map((p) => p.id)
 					const productImages = await db(c.env)
 						.select({
 							productId: productImagesTable.product_id,
@@ -336,7 +448,7 @@ export const createSQLQueryTool = (c: Context<AppContext>, groupId: number) =>
 							inArray(productImagesTable.product_id, productIds)
 						)
 
-					productsWithImages = results.map((product: any) => ({
+					productsWithImages = results.map((product) => ({
 						...product,
 						images: productImages
 							.filter((img) => img.productId === product.id)
@@ -488,9 +600,22 @@ export const createSemanticSearchTool = (
 					.filter((p) => p !== null)
 
 				// Presign all product image URLs
-				productsWithDetails = await presignProductImages(
+				const productsForPresigning = productsWithDetails.map((p) => ({
+					...p,
+					images: p.images,
+				}))
+				const presignedProducts = await presignProductImages(
 					c,
-					productsWithDetails
+					productsForPresigning
+				)
+
+				// Map back to include similarityScore
+				productsWithDetails = productsWithDetails.map(
+					(product, index) => ({
+						...product,
+						images:
+							presignedProducts[index]?.images || product.images,
+					})
 				)
 
 				return {
@@ -595,7 +720,14 @@ export const createProductDetailsTool = (
 				}
 
 				// Get images if requested
-				let productsWithImages = products
+				let productsWithImages = products.map((product) => ({
+					...product,
+					images: [] as Array<{
+						url: string
+						altText: string | null
+						index: number
+					}>,
+				}))
 				if (includeImages) {
 					const productImagesList = await db(c.env)
 						.select({
