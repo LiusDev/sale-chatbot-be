@@ -1,5 +1,6 @@
 import { Context, Next } from "hono"
 import { AppContext } from "../types/env"
+import { getMetaAppSecret } from "../routes/meta/meta.repo"
 
 /**
  * Middleware to verify Meta webhook signature
@@ -35,9 +36,10 @@ export async function metaWebhookVerification(
 		}
 
 		const signatureHash = elements[1]
+		const appSecret = await getMetaAppSecret(c)
 
 		// Create expected hash using HMAC-SHA256 with the app secret
-		const expectedHash = await createHmacSha256(c.env.META_APP_SECRET, body)
+		const expectedHash = await createHmacSha256(appSecret, body)
 
 		// Compare signatures (using simple comparison like Express.js example)
 		if (signatureHash !== expectedHash) {

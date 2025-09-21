@@ -6,6 +6,7 @@ const ALLOWED_APP_INFO_KEYS = [
 	"shopName",
 	"metaAccessToken",
 	"metaWebhookVerifyKey",
+	"metaAppSecret",
 ] as const
 
 // Schema for validating app info update payload

@@ -23,6 +23,13 @@ common.get("/", async (c) => {
 	}
 })
 
+common.post("/webhook-verify-key", async (c) => {
+	// generate a random key, then save to db and response the key
+	const metaWebhookVerifyKey = crypto.randomUUID()
+	await updateAppInfo(c, { metaWebhookVerifyKey })
+	return response(c, metaWebhookVerifyKey)
+})
+
 common.put("/", zValidator("json", updateAppInfoBodySchema), async (c) => {
 	const validationResult = c.req.valid("json")
 	try {

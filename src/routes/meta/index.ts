@@ -1,6 +1,17 @@
 import { Context, Hono, Next } from "hono"
 import { AppContext } from "../../types/env"
-import { metaWebhookVerification } from "../../middlewares"
+import { authMiddleware, metaWebhookVerification } from "../../middlewares"
+import {
+	getMetaAccessToken,
+	getMetaPages,
+	getMetaWebhookVerifyKey,
+	upsertMetaPages,
+} from "./meta.repo"
+import { getFanpagesFromMeta } from "../../libs/meta"
+import { listResponse, response } from "../../utils/response"
+import { zValidator } from "@hono/zod-validator"
+import { metaPageSchema } from "./meta.schema"
+import { error } from "../../utils/error"
 
 const meta = new Hono<AppContext>()
 
@@ -17,14 +28,79 @@ meta.get("/webhook", async (c) => {
 	const mode = c.req.query("hub.mode")
 	const challenge = c.req.query("hub.challenge")
 	const verifyToken = c.req.query("hub.verify_token")
+
+	const metaWebhookVerifyKey = await getMetaWebhookVerifyKey(c)
 	if (
 		mode === "subscribe" &&
-		verifyToken === c.env.META_VERIFY_TOKEN &&
+		verifyToken === metaWebhookVerifyKey &&
 		challenge
 	) {
 		return c.text(challenge)
 	}
 	return c.json({ message: "Verify failed" })
+})
+
+meta.use(authMiddleware)
+
+meta.get("/meta-pages", async (c) => {
+	try {
+		const fanpages = await getFanpagesFromMeta(c)
+		return listResponse(
+			c,
+			fanpages.data.map((page) => ({
+				id: page.id,
+				name: page.name,
+				accessToken: page.access_token,
+				category: page.category,
+			})),
+			{
+				total: fanpages.data.length,
+				page: 1,
+				limit: 50,
+			}
+		)
+	} catch (error) {
+		console.error("Error fetching fanpages from Meta:", error)
+		return c.json(
+			{
+				message: "Failed to fetch fanpages from Meta",
+				error: error instanceof Error ? error.message : "Unknown error",
+			},
+			500
+		)
+	}
+})
+
+// upsert pages to store page infomation to database
+meta.get("/pages", async (c) => {
+	try {
+		const pages = await getMetaPages(c)
+		return listResponse(c, pages, {
+			total: pages.length,
+			page: 1,
+			limit: 50,
+		})
+	} catch (err) {
+		console.error("Error getting pages:", err)
+		return error(c, {
+			message: "Failed to get pages",
+			status: 500,
+		})
+	}
+})
+
+meta.patch("/pages", zValidator("json", metaPageSchema), async (c) => {
+	try {
+		const pages = c.req.valid("json")
+		const result = await upsertMetaPages(c, pages)
+		return response(c, result)
+	} catch (err) {
+		console.error("Error upserting pages:", err)
+		return error(c, {
+			message: "Failed to upsert pages",
+			status: 500,
+		})
+	}
 })
 
 export default meta

@@ -1,0 +1,454 @@
+# Meta API Documentation
+
+## Overview
+
+API quản lý tích hợp Meta (Facebook/Instagram) bao gồm việc lấy danh sách fanpages từ Meta API và lưu trữ thông tin các trang trong database. Hỗ trợ đồng bộ hóa dữ liệu fanpages giữa Meta và hệ thống nội bộ.
+
+## Base URL
+
+```
+/meta
+```
+
+## Authentication
+
+Tất cả endpoints đều yêu cầu authentication token trong header:
+
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+---
+
+## API Endpoints
+
+### 1. Get Meta Fanpages
+
+**GET** `/meta/meta-pages`
+
+Lấy danh sách tất cả fanpages từ Meta API. Endpoint này gọi trực tiếp đến Meta Graph API để lấy thông tin real-time về các trang mà user có quyền quản lý.
+
+#### Response
+
+```json
+{
+	"success": true,
+	"data": [
+		{
+			"id": "123456789012345",
+			"name": "My Business Page",
+			"accessToken": "EAAxxxxxxxxxxxxxxx",
+			"category": "Business"
+		},
+		{
+			"id": "987654321098765",
+			"name": "My Shop Page",
+			"accessToken": "EAAyyyyyyyyyyyyyy",
+			"category": "Shopping/Retail"
+		}
+	],
+	"meta": {
+		"total": 2,
+		"page": 1,
+		"limit": 50
+	}
+}
+```
+
+#### Response Fields
+
+| Field         | Type   | Description            |
+| ------------- | ------ | ---------------------- |
+| `id`          | string | Meta Page ID           |
+| `name`        | string | Tên trang              |
+| `accessToken` | string | Access token của trang |
+| `category`    | string | Danh mục trang         |
+
+#### Error Responses
+
+```json
+{
+	"message": "Failed to fetch fanpages from Meta",
+	"error": "Meta access token not found. Please configure metaAccessToken in app settings."
+}
+```
+
+### 2. Get Stored Pages
+
+**GET** `/meta/pages`
+
+Lấy danh sách các trang đã được lưu trữ trong database. Đây là dữ liệu local, có thể khác với dữ liệu real-time từ Meta API.
+
+#### Response
+
+```json
+{
+	"success": true,
+	"data": [
+		{
+			"id": 1,
+			"page_id": "123456789012345",
+			"name": "My Business Page",
+			"access_token": "EAAxxxxxxxxxxxxxxx",
+			"category": "Business",
+			"created_at": "2024-01-15T10:30:00.000Z",
+			"updated_at": "2024-01-15T10:30:00.000Z"
+		},
+		{
+			"id": 2,
+			"page_id": "987654321098765",
+			"name": "My Shop Page",
+			"access_token": "EAAyyyyyyyyyyyyyy",
+			"category": "Shopping/Retail",
+			"created_at": "2024-01-15T11:00:00.000Z",
+			"updated_at": "2024-01-15T11:00:00.000Z"
+		}
+	],
+	"meta": {
+		"total": 2,
+		"page": 1,
+		"limit": 50
+	}
+}
+```
+
+#### Response Fields
+
+| Field          | Type   | Description                   |
+| -------------- | ------ | ----------------------------- |
+| `id`           | number | Internal database ID          |
+| `page_id`      | string | Meta Page ID                  |
+| `name`         | string | Tên trang                     |
+| `access_token` | string | Access token của trang        |
+| `category`     | string | Danh mục trang                |
+| `created_at`   | string | Thời gian tạo (ISO 8601)      |
+| `updated_at`   | string | Thời gian cập nhật (ISO 8601) |
+
+### 3. Upsert Meta Pages
+
+**PATCH** `/meta/pages`
+
+Thêm mới hoặc cập nhật thông tin các trang Meta vào database. Nếu trang đã tồn tại (dựa trên page_id), sẽ cập nhật thông tin. Nếu chưa tồn tại, sẽ tạo mới.
+
+#### Request Body
+
+```json
+[
+	{
+		"id": "123456789012345",
+		"name": "Updated Business Page",
+		"accessToken": "EAAnewxxxxxxxxxx",
+		"category": "Business"
+	},
+	{
+		"id": "111222333444555",
+		"name": "New Page",
+		"accessToken": "EAAnewyyyyyyyyyy",
+		"category": "Entertainment"
+	}
+]
+```
+
+#### Request Schema
+
+| Field         | Type   | Required | Description            |
+| ------------- | ------ | -------- | ---------------------- |
+| `id`          | string | ✅       | Meta Page ID           |
+| `name`        | string | ✅       | Tên trang              |
+| `accessToken` | string | ✅       | Access token của trang |
+| `category`    | string | ✅       | Danh mục trang         |
+
+#### Validation Rules
+
+-   Ít nhất một trang phải được cung cấp
+-   Tất cả các trường đều bắt buộc và không được rỗng
+-   `id` phải là string có độ dài ít nhất 1 ký tự
+-   `accessToken` phải là string hợp lệ
+
+#### Response
+
+```json
+{
+	"success": true,
+	"data": [
+		{
+			"id": 1,
+			"page_id": "123456789012345",
+			"name": "Updated Business Page",
+			"access_token": "EAAnewxxxxxxxxxx",
+			"category": "Business",
+			"created_at": "2024-01-15T10:30:00.000Z",
+			"updated_at": "2024-01-15T12:00:00.000Z"
+		},
+		{
+			"id": 3,
+			"page_id": "111222333444555",
+			"name": "New Page",
+			"access_token": "EAAnewyyyyyyyyyy",
+			"category": "Entertainment",
+			"created_at": "2024-01-15T12:00:00.000Z",
+			"updated_at": "2024-01-15T12:00:00.000Z"
+		}
+	]
+}
+```
+
+---
+
+## Data Structure
+
+### Meta Pages Table Schema
+
+```sql
+CREATE TABLE meta_pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page_id TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    access_token TEXT NOT NULL,
+    category TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+```
+
+### Meta Fanpage Types
+
+```typescript
+interface MetaFanpage {
+	access_token: string
+	category: string
+	category_list: {
+		id: string
+		name: string
+	}[]
+	name: string
+	id: string
+	tasks: string[]
+}
+
+interface MetaFanpageList {
+	data: MetaFanpage[]
+	paging: {
+		cursors: {
+			before: string
+			after: string
+		}
+	}
+}
+```
+
+---
+
+## Error Handling
+
+### Common Error Codes
+
+| Status | Code           | Description                 |
+| ------ | -------------- | --------------------------- |
+| 400    | BAD_REQUEST    | Invalid request body/params |
+| 401    | UNAUTHORIZED   | Missing/invalid auth token  |
+| 500    | INTERNAL_ERROR | Server error                |
+
+### Error Response Format
+
+```json
+{
+	"success": false,
+	"error": {
+		"message": "Failed to fetch fanpages from Meta",
+		"status": 500
+	}
+}
+```
+
+### Validation Errors
+
+```json
+{
+	"success": false,
+	"error": {
+		"message": "Page ID is required",
+		"status": 400
+	}
+}
+```
+
+### Meta API Errors
+
+```json
+{
+	"message": "Failed to fetch fanpages from Meta",
+	"error": "Meta access token not found. Please configure metaAccessToken in app settings."
+}
+```
+
+---
+
+## Usage Examples
+
+### JavaScript/TypeScript
+
+```javascript
+// Get fanpages from Meta API
+async function getMetaFanpages() {
+	const response = await fetch("/meta/meta-pages", {
+		method: "GET",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+	})
+
+	return response.json()
+}
+
+// Get stored pages from database
+async function getStoredPages() {
+	const response = await fetch("/meta/pages", {
+		method: "GET",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+	})
+
+	return response.json()
+}
+
+// Sync pages to database
+async function syncMetaPages(pages) {
+	const response = await fetch("/meta/pages", {
+		method: "PATCH",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(pages),
+	})
+
+	return response.json()
+}
+
+// Example usage: Sync Meta fanpages to database
+const fanpages = await getMetaFanpages()
+const pagesToSync = fanpages.data.map((page) => ({
+	id: page.id,
+	name: page.name,
+	accessToken: page.accessToken,
+	category: page.category,
+}))
+
+const result = await syncMetaPages(pagesToSync)
+console.log("Synced pages:", result.data)
+```
+
+### cURL Examples
+
+```bash
+# Get fanpages from Meta API
+curl -X GET "https://your-domain.com/meta/meta-pages" \
+  -H "Authorization: Bearer your-jwt-token"
+
+# Get stored pages
+curl -X GET "https://your-domain.com/meta/pages" \
+  -H "Authorization: Bearer your-jwt-token"
+
+# Sync pages to database
+curl -X PATCH "https://your-domain.com/meta/pages" \
+  -H "Authorization: Bearer your-jwt-token" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "id": "123456789012345",
+      "name": "My Business Page",
+      "accessToken": "EAAxxxxxxxxxxxxxxx",
+      "category": "Business"
+    }
+  ]'
+```
+
+---
+
+## Integration Notes
+
+### Meta API Requirements
+
+Để sử dụng Meta API endpoints, cần cấu hình:
+
+1. **Meta Access Token**: Lưu trong `common_app_info` với key `metaAccessToken`
+2. **App Secret**: Lưu trong `common_app_info` với key `metaAppSecret`
+3. **Webhook Verify Key**: Lưu trong `common_app_info` với key `metaWebhookVerifyKey`
+
+### Data Synchronization
+
+-   **Real-time data**: `/meta-pages` endpoint lấy dữ liệu trực tiếp từ Meta API
+-   **Local data**: `/pages` endpoint lấy dữ liệu từ database local
+-   **Sync process**: Sử dụng `/meta/pages` PATCH để đồng bộ dữ liệu
+
+### Access Token Management
+
+-   Mỗi fanpage có access token riêng
+-   Access token được lưu trữ an toàn trong database
+-   Token có thể được refresh thông qua Meta API
+
+---
+
+## Security Considerations
+
+### 1. **Access Token Protection**
+
+-   Access token được lưu trữ trong database với encryption
+-   Không log access token trong console hoặc logs
+-   Sử dụng HTTPS cho tất cả API calls
+
+### 2. **Authentication Required**
+
+-   Tất cả endpoints đều yêu cầu JWT token hợp lệ
+-   Token phải có quyền truy cập hệ thống
+
+### 3. **Meta API Security**
+
+-   Validate Meta webhook signatures
+-   Sử dụng secure tokens và secrets
+-   Implement proper error handling cho Meta API calls
+
+---
+
+## Best Practices
+
+### 1. **Data Management**
+
+-   ✅ Sync dữ liệu định kỳ để đảm bảo consistency
+-   ✅ Validate dữ liệu trước khi lưu vào database
+-   ✅ Handle Meta API rate limits
+-   ❌ Không cache access token quá lâu
+
+### 2. **Error Handling**
+
+-   ✅ Handle Meta API errors gracefully
+-   ✅ Provide meaningful error messages
+-   ✅ Log errors cho debugging
+-   ✅ Implement retry logic cho Meta API calls
+
+### 3. **Performance**
+
+-   ✅ Cache Meta fanpages data khi có thể
+-   ✅ Sử dụng pagination cho large datasets
+-   ✅ Batch operations khi sync nhiều pages
+-   ❌ Không gọi Meta API quá thường xuyên
+
+---
+
+## Rate Limits
+
+-   **Meta API**: Theo giới hạn của Meta Graph API
+-   **Database operations**: 100 requests/minute/user
+-   **Burst limit**: 10 requests/second
+
+## Storage Information
+
+-   **Database**: SQLite (Cloudflare D1)
+-   **Backup**: Automatic daily backups
+-   **Retention**: Data được lưu trữ vĩnh viễn
+-   **Encryption**: At-rest encryption enabled
+-   **Meta API**: Real-time data từ Facebook Graph API v23.0
