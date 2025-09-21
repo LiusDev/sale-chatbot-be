@@ -71,3 +71,11 @@ export const upsertMetaPages = async (
 
 	return results
 }
+
+export const deleteMetaPage = async (
+	c: Context<AppContext>,
+	pageId: string
+) => {
+	const dbConnection = db(c.env)
+	await dbConnection.delete(metaPages).where(eq(metaPages.page_id, pageId))
+}

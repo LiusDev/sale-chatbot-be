@@ -2,6 +2,7 @@ import { Context, Hono, Next } from "hono"
 import { AppContext } from "../../types/env"
 import { authMiddleware, metaWebhookVerification } from "../../middlewares"
 import {
+	deleteMetaPage,
 	getMetaAccessToken,
 	getMetaPages,
 	getMetaWebhookVerifyKey,
@@ -98,6 +99,20 @@ meta.patch("/pages", zValidator("json", metaPageSchema), async (c) => {
 		console.error("Error upserting pages:", err)
 		return error(c, {
 			message: "Failed to upsert pages",
+			status: 500,
+		})
+	}
+})
+
+meta.delete("/pages/:pageId", async (c) => {
+	try {
+		const pageId = c.req.param("pageId")
+		const result = await deleteMetaPage(c, pageId)
+		return response(c, result)
+	} catch (err) {
+		console.error("Error deleting page:", err)
+		return error(c, {
+			message: "Failed to delete page",
 			status: 500,
 		})
 	}

@@ -130,66 +130,36 @@ Lấy danh sách các trang đã được lưu trữ trong database. Đây là d
 
 Thêm mới hoặc cập nhật thông tin các trang Meta vào database. Nếu trang đã tồn tại (dựa trên page_id), sẽ cập nhật thông tin. Nếu chưa tồn tại, sẽ tạo mới.
 
-#### Request Body
+### 4. Delete Meta Page
 
-```json
-[
-	{
-		"id": "123456789012345",
-		"name": "Updated Business Page",
-		"accessToken": "EAAnewxxxxxxxxxx",
-		"category": "Business"
-	},
-	{
-		"id": "111222333444555",
-		"name": "New Page",
-		"accessToken": "EAAnewyyyyyyyyyy",
-		"category": "Entertainment"
-	}
-]
-```
+**DELETE** `/meta/pages/:pageId`
 
-#### Request Schema
+Xóa một trang Meta khỏi database dựa trên page_id.
 
-| Field         | Type   | Required | Description            |
-| ------------- | ------ | -------- | ---------------------- |
-| `id`          | string | ✅       | Meta Page ID           |
-| `name`        | string | ✅       | Tên trang              |
-| `accessToken` | string | ✅       | Access token của trang |
-| `category`    | string | ✅       | Danh mục trang         |
+#### Path Parameters
 
-#### Validation Rules
-
--   Ít nhất một trang phải được cung cấp
--   Tất cả các trường đều bắt buộc và không được rỗng
--   `id` phải là string có độ dài ít nhất 1 ký tự
--   `accessToken` phải là string hợp lệ
+| Parameter | Type   | Required | Description    |
+| --------- | ------ | -------- | -------------- |
+| `pageId`  | string | ✅       | Meta Page ID   |
 
 #### Response
 
 ```json
 {
 	"success": true,
-	"data": [
-		{
-			"id": 1,
-			"page_id": "123456789012345",
-			"name": "Updated Business Page",
-			"access_token": "EAAnewxxxxxxxxxx",
-			"category": "Business",
-			"created_at": "2024-01-15T10:30:00.000Z",
-			"updated_at": "2024-01-15T12:00:00.000Z"
-		},
-		{
-			"id": 3,
-			"page_id": "111222333444555",
-			"name": "New Page",
-			"access_token": "EAAnewyyyyyyyyyy",
-			"category": "Entertainment",
-			"created_at": "2024-01-15T12:00:00.000Z",
-			"updated_at": "2024-01-15T12:00:00.000Z"
-		}
-	]
+	"data": null
+}
+```
+
+#### Error Responses
+
+```json
+{
+	"success": false,
+	"error": {
+		"message": "Failed to delete page",
+		"status": 500
+	}
 }
 ```
 
@@ -204,10 +174,10 @@ CREATE TABLE meta_pages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     page_id TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
-    access_token TEXT NOT NULL,
-    category TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    access_token TEXT,
+    category TEXT,
+    created_at TEXT DEFAULT 'CURRENT_TIMESTAMP',
+    updated_at TEXT DEFAULT 'CURRENT_TIMESTAMP'
 );
 ```
 
@@ -329,6 +299,19 @@ async function syncMetaPages(pages) {
 	return response.json()
 }
 
+// Delete a page from database
+async function deleteMetaPage(pageId) {
+	const response = await fetch(`/meta/pages/${pageId}`, {
+		method: "DELETE",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+	})
+
+	return response.json()
+}
+
 // Example usage: Sync Meta fanpages to database
 const fanpages = await getMetaFanpages()
 const pagesToSync = fanpages.data.map((page) => ({
@@ -340,6 +323,10 @@ const pagesToSync = fanpages.data.map((page) => ({
 
 const result = await syncMetaPages(pagesToSync)
 console.log("Synced pages:", result.data)
+
+// Example usage: Delete a page
+const deleteResult = await deleteMetaPage("123456789012345")
+console.log("Delete result:", deleteResult)
 ```
 
 ### cURL Examples
@@ -365,6 +352,10 @@ curl -X PATCH "https://your-domain.com/meta/pages" \
       "category": "Business"
     }
   ]'
+
+# Delete a page
+curl -X DELETE "https://your-domain.com/meta/pages/123456789012345" \
+  -H "Authorization: Bearer your-jwt-token"
 ```
 
 ---
@@ -384,6 +375,7 @@ curl -X PATCH "https://your-domain.com/meta/pages" \
 -   **Real-time data**: `/meta-pages` endpoint lấy dữ liệu trực tiếp từ Meta API
 -   **Local data**: `/pages` endpoint lấy dữ liệu từ database local
 -   **Sync process**: Sử dụng `/meta/pages` PATCH để đồng bộ dữ liệu
+-   **Delete process**: Sử dụng `/meta/pages/:pageId` DELETE để xóa trang
 
 ### Access Token Management
 
@@ -421,6 +413,7 @@ curl -X PATCH "https://your-domain.com/meta/pages" \
 -   ✅ Sync dữ liệu định kỳ để đảm bảo consistency
 -   ✅ Validate dữ liệu trước khi lưu vào database
 -   ✅ Handle Meta API rate limits
+-   ✅ Xóa dữ liệu không cần thiết để tiết kiệm storage
 -   ❌ Không cache access token quá lâu
 
 ### 2. **Error Handling**
