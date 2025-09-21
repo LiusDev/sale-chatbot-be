@@ -6,7 +6,7 @@ import { MetaFanpageList } from "../types/meta"
 
 const metaBaseAPI = (accessToken: string) =>
 	ky.create({
-		prefixUrl: "https://graph.facebook.com/v23.0/me/accounts",
+		prefixUrl: "https://graph.facebook.com/v23.0",
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
 		},
