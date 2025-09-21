@@ -45,3 +45,10 @@ export const aiAgents = sqliteTable("ai_agents", {
 	created_at: text().default("CURRENT_TIMESTAMP"),
 	updated_at: text().default("CURRENT_TIMESTAMP"),
 })
+
+export const commonAppInfo = sqliteTable("common_app_info", {
+	id: int().primaryKey({ autoIncrement: true }),
+	key: text().notNull(),
+	value: text().notNull(),
+	isPrivate: int({ mode: "boolean" }).notNull().default(false),
+})

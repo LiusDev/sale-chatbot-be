@@ -201,8 +201,6 @@ ai.post("/chat", zValidator("json", chatRequestSchema), async (c) => {
 				messages,
 				temperature: agent.temperature,
 				maxTokens: agent.max_tokens,
-				knowledgeSourceGroupId:
-					agent.knowledge_source_group_id || undefined,
 				topK: agent.top_k,
 				groupId: agent.knowledge_source_group_id,
 			})
@@ -217,8 +215,6 @@ ai.post("/chat", zValidator("json", chatRequestSchema), async (c) => {
 				messages,
 				temperature: agent.temperature,
 				maxTokens: agent.max_tokens,
-				knowledgeSourceGroupId:
-					agent.knowledge_source_group_id || undefined,
 				topK: agent.top_k,
 				groupId: agent.knowledge_source_group_id,
 			})

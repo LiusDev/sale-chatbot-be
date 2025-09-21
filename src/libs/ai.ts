@@ -20,6 +20,7 @@ import { eq, inArray, like, or, and, sql, asc, desc } from "drizzle-orm"
 import { AIModel } from "../types/ai"
 import { createOpenAI } from "@ai-sdk/openai"
 import { generateMultiplePresignedUrls } from "./r2"
+import { getLLMAppContext } from "../routes/common/common.repo"
 
 // Create Workers AI provider instance
 export function createAIProvider(c: Context<AppContext>) {
@@ -35,10 +36,16 @@ export function normalizeTemperature(temp: number): number {
 }
 
 // Create enhanced system prompt for Agentic RAG
-function createAgenticSystemPrompt(basePrompt: string): string {
+function createAgenticSystemPrompt(
+	basePrompt: string,
+	appContext: string
+): string {
 	let enhancedPrompt = basePrompt
 	// Emphasize tool selection policy: prefer semantic search first
 	enhancedPrompt += `
+
+THÔNG TIN CHUNG/LIÊN HỆ:
+${appContext}
 
 CHIẾN LƯỢC CHỌN CÔNG CỤ (RẤT QUAN TRỌNG):
 
@@ -146,30 +153,15 @@ async function prepareAIConfig(
 	c: Context<AppContext>,
 	{
 		systemPrompt,
-		knowledgeSourceGroupId,
 		groupId,
 	}: {
 		systemPrompt: string
-		knowledgeSourceGroupId?: number
 		groupId: number | null
 	}
 ) {
-	// Get knowledge source name if provided
-	let knowledgeSourceName: string | undefined
-	if (knowledgeSourceGroupId) {
-		const groupInfo = await db(c.env)
-			.select()
-			.from(productGroupsTable)
-			.where(eq(productGroupsTable.id, knowledgeSourceGroupId))
-			.limit(1)
-
-		if (groupInfo.length > 0) {
-			knowledgeSourceName = groupInfo[0].name
-		}
-	}
-
 	// Create enhanced system prompt
-	const enhancedPrompt = createAgenticSystemPrompt(systemPrompt)
+	const appContext = await getLLMAppContext(c)
+	const enhancedPrompt = createAgenticSystemPrompt(systemPrompt, appContext)
 
 	// Create tools
 	const tools = groupId ? createAgentTools(c, groupId) : {}
@@ -789,7 +781,6 @@ export async function generateAIResponse(
 		messages: inputMessages = [],
 		temperature = 70,
 		maxTokens = 5000,
-		knowledgeSourceGroupId,
 		topK = 5,
 		groupId,
 	}: {
@@ -798,7 +789,6 @@ export async function generateAIResponse(
 		messages: UIMessage[]
 		temperature?: number
 		maxTokens?: number
-		knowledgeSourceGroupId?: number
 		topK?: number
 		groupId: number | null
 	}
@@ -807,7 +797,6 @@ export async function generateAIResponse(
 		// Prepare AI configuration using shared function
 		const { enhancedPrompt, tools, aiProvider } = await prepareAIConfig(c, {
 			systemPrompt,
-			knowledgeSourceGroupId,
 			groupId,
 		})
 
@@ -847,7 +836,6 @@ export async function streamAIResponse(
 		messages: inputMessages = [],
 		temperature = 70,
 		maxTokens = 5000,
-		knowledgeSourceGroupId,
 		topK = 5,
 		groupId,
 	}: {
@@ -856,7 +844,6 @@ export async function streamAIResponse(
 		messages: UIMessage[]
 		temperature?: number
 		maxTokens?: number
-		knowledgeSourceGroupId?: number
 		topK?: number
 		groupId: number | null
 	}
@@ -865,7 +852,6 @@ export async function streamAIResponse(
 		// Prepare AI configuration using shared function
 		const { enhancedPrompt, tools, aiProvider } = await prepareAIConfig(c, {
 			systemPrompt,
-			knowledgeSourceGroupId,
 			groupId,
 		})
 

@@ -8,6 +8,7 @@ import products from "./routes/products"
 import ai from "./routes/ai"
 import { testPresignedUrlGeneration } from "./libs/r2"
 import meta from "./routes/meta"
+import common from "./routes/common"
 const app = new Hono<AppContext>().basePath("/api")
 
 app.use(
@@ -79,6 +80,9 @@ app.get("/", (c: Context<AppContext>) => {
 
 // Auth routes
 app.route("/auth", auth)
+
+// Common routes
+app.route("/common", common)
 
 // Products routes
 app.route("/products", products)
