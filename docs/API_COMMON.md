@@ -2,7 +2,7 @@
 
 ## Overview
 
-API quản lý thông tin cấu hình ứng dụng (App Info) với hệ thống key-value pairs. Hỗ trợ lưu trữ và cập nhật các thông tin cấu hình như thông tin shop, token API, và các thiết lập khác.
+API quản lý thông tin cấu hình ứng dụng (App Info) với hệ thống key-value pairs. Hỗ trợ lưu trữ và cập nhật các thông tin cấu hình như thông tin shop, token API, và các thiết lập khác. Đặc biệt hỗ trợ tự động tạo webhook verify key cho Meta integration.
 
 ## Base URL
 
@@ -51,7 +51,28 @@ Lấy tất cả thông tin cấu hình ứng dụng. Các thông tin private s�
 | `metaAccessToken`      | string | Meta access token (masked)       |
 | `metaWebhookVerifyKey` | string | Meta webhook verify key (masked) |
 
-### 2. Update App Info
+### 2. Generate Webhook Verify Key
+
+**POST** `/common/webhook-verify-key`
+
+Tự động tạo và lưu webhook verify key mới. Key được tạo bằng `crypto.randomUUID()` và tự động cập nhật vào database.
+
+#### Response
+
+```json
+{
+	"success": true,
+	"data": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
+```
+
+#### Response Fields
+
+| Field  | Type   | Description                   |
+| ------ | ------ | ----------------------------- |
+| `data` | string | Webhook verify key mới (UUID) |
+
+### 3. Update App Info
 
 **PUT** `/common`
 
@@ -176,6 +197,19 @@ async function getAppInfo() {
 	return response.json()
 }
 
+// Generate new webhook verify key
+async function generateWebhookVerifyKey() {
+	const response = await fetch("/common/webhook-verify-key", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+	})
+
+	return response.json()
+}
+
 // Update app info
 async function updateAppInfo(updates) {
 	const response = await fetch("/common", {
@@ -194,9 +228,13 @@ async function updateAppInfo(updates) {
 const appInfo = await getAppInfo()
 console.log("Shop Name:", appInfo.data.shopName)
 
+// Generate new webhook verify key
+const newKey = await generateWebhookVerifyKey()
+console.log("New webhook verify key:", newKey.data)
+
 await updateAppInfo({
 	shopName: "New Shop Name",
-	zalo: "https://zalo.me/123456789",
+	zalo: "0987654321",
 })
 ```
 
@@ -207,13 +245,17 @@ await updateAppInfo({
 curl -X GET "https://your-domain.com/common" \
   -H "Authorization: Bearer your-jwt-token"
 
+# Generate new webhook verify key
+curl -X POST "https://your-domain.com/common/webhook-verify-key" \
+  -H "Authorization: Bearer your-jwt-token"
+
 # Update app info
 curl -X PUT "https://your-domain.com/common" \
   -H "Authorization: Bearer your-jwt-token" \
   -H "Content-Type: application/json" \
   -d '{
     "shopName": "Updated Shop",
-    "zalo": "https://zalo.me/987654321"
+    "zalo": "0987654321"
   }'
 ```
 
@@ -245,7 +287,9 @@ curl -X PUT "https://your-domain.com/common" \
 -   ✅ Luôn validate dữ liệu trước khi gửi request
 -   ✅ Sử dụng HTTPS cho tất cả requests
 -   ✅ Lưu trữ JWT token an toàn
+-   ✅ Sử dụng endpoint tự động tạo webhook verify key
 -   ❌ Không hardcode sensitive data trong client code
+-   ❌ Không tự tạo webhook verify key thủ công
 
 ### 2. **Error Handling**
 
@@ -282,6 +326,13 @@ Các trường `metaAccessToken` và `metaWebhookVerifyKey` được sử dụng
 -   Meta webhook verification
 -   Meta API calls
 -   Facebook/Instagram integration
+
+#### Webhook Verify Key Management
+
+-   **Tự động tạo**: Sử dụng endpoint `POST /common/webhook-verify-key` để tạo key mới
+-   **Bảo mật**: Key được tạo bằng `crypto.randomUUID()` đảm bảo tính ngẫu nhiên cao
+-   **Tự động lưu**: Key mới được tự động cập nhật vào database
+-   **Không cần nhập tay**: Loại bỏ việc người dùng phải tự tạo và nhập key
 
 ---
 

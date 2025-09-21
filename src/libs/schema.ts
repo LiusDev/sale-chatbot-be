@@ -60,3 +60,29 @@ export const metaPages = sqliteTable("meta_pages", {
 	access_token: text(),
 	category: text(),
 })
+
+export const metaPageConversations = sqliteTable("meta_page_conversations", {
+	id: int().primaryKey({ autoIncrement: true }),
+	page_id: text()
+		.notNull()
+		.references(() => metaPages.page_id),
+	conversation_id: text().notNull(),
+	// participants: text().notNull(),
+	agentMode: text().notNull().default("auto"),
+	isConfirmOrder: int({ mode: "boolean" }).notNull().default(false),
+})
+
+export const metaPageConversationMessages = sqliteTable(
+	"meta_page_conversation_messages",
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		conversation_id: text()
+			.notNull()
+			.references(() => metaPageConversations.conversation_id),
+		created_time: text().notNull(),
+		message_id: text().notNull(),
+		message: text().notNull(),
+		from: text({ mode: "json" }).notNull(),
+		attachments: text({ mode: "json" }).default(""),
+	}
+)

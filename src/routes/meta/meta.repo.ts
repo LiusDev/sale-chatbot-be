@@ -1,9 +1,15 @@
 import { db } from "../../libs/db"
-import { commonAppInfo, metaPages } from "../../libs/schema"
+import {
+	commonAppInfo,
+	metaPageConversationMessages,
+	metaPageConversations,
+	metaPages,
+} from "../../libs/schema"
 import { AppContext } from "../../types/env"
 import { eq } from "drizzle-orm"
 import { Context } from "hono"
 import { MetaPageSchema } from "./meta.schema"
+import { MetaPageConversation } from "../../types/meta"
 
 export const getMetaWebhookVerifyKey = async (c: Context<AppContext>) => {
 	const appInfo = await db(c.env)
@@ -70,6 +76,35 @@ export const upsertMetaPages = async (
 	}
 
 	return results
+}
+
+export const initPageConversations = async (
+	c: Context<AppContext>,
+	{
+		pageId,
+		conversations,
+	}: {
+		pageId: string
+		conversations: MetaPageConversation[]
+	}
+) => {
+	const dbConnection = db(c.env)
+	for (const conversation of conversations) {
+		await dbConnection.insert(metaPageConversations).values({
+			page_id: pageId,
+			conversation_id: conversation.id,
+		})
+		for (const message of conversation.messages?.data || []) {
+			await dbConnection.insert(metaPageConversationMessages).values({
+				conversation_id: conversation.id,
+				message_id: message.id,
+				message: message.message,
+				from: message.from,
+				attachments: message.attachments,
+				created_time: message.created_time,
+			})
+		}
+	}
 }
 
 export const deleteMetaPage = async (

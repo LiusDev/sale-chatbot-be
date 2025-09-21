@@ -6,9 +6,10 @@ import {
 	getMetaAccessToken,
 	getMetaPages,
 	getMetaWebhookVerifyKey,
+	initPageConversations,
 	upsertMetaPages,
 } from "./meta.repo"
-import { getFanpagesFromMeta } from "../../libs/meta"
+import { getFanpagesFromMeta, getMetaPageConversations } from "../../libs/meta"
 import { listResponse, response } from "../../utils/response"
 import { zValidator } from "@hono/zod-validator"
 import { metaPageSchema } from "./meta.schema"
@@ -45,7 +46,8 @@ meta.use(authMiddleware)
 
 meta.get("/meta-pages", async (c) => {
 	try {
-		const fanpages = await getFanpagesFromMeta(c)
+		const accessToken = await getMetaAccessToken(c)
+		const fanpages = await getFanpagesFromMeta(c, { accessToken })
 		return listResponse(
 			c,
 			fanpages.data.map((page) => ({
@@ -72,7 +74,6 @@ meta.get("/meta-pages", async (c) => {
 	}
 })
 
-// upsert pages to store page infomation to database
 meta.get("/pages", async (c) => {
 	try {
 		const pages = await getMetaPages(c)
@@ -90,10 +91,25 @@ meta.get("/pages", async (c) => {
 	}
 })
 
+// upsert pages to store page infomation to database
 meta.patch("/pages", zValidator("json", metaPageSchema), async (c) => {
 	try {
 		const pages = c.req.valid("json")
 		const result = await upsertMetaPages(c, pages)
+
+		// Get initial conversations of each page from Meta API
+		for (const page of result) {
+			const conversations = await getMetaPageConversations(c, {
+				pageId: page.page_id,
+				pageAccessToken: page.access_token!,
+			})
+
+			await initPageConversations(c, {
+				pageId: page.page_id,
+				conversations: conversations.data,
+			})
+		}
+
 		return response(c, result)
 	} catch (err) {
 		console.error("Error upserting pages:", err)
