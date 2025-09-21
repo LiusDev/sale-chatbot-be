@@ -23,7 +23,7 @@ export const getFanpagesFromMeta = async (c: Context<AppContext>) => {
 
 	try {
 		const fanpages = await metaBaseAPI(metaAccessToken)
-			.get("/me/accounts")
+			.get("me/accounts")
 			.json<MetaFanpageList>()
 		return fanpages
 	} catch (error) {
