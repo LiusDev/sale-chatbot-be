@@ -87,8 +87,8 @@ async function presignProductImages(
 			if (product.images && Array.isArray(product.images)) {
 				product.images.forEach((image) => {
 					if (image.url) {
-						// Extract R2 key from URL (assuming URL format: https://domain.com/key or just the key)
-						const r2Key = image.url.split("/").pop() || image.url
+						// Use the full image URL as R2 key (it already contains the correct path)
+						const r2Key = image.url
 						allImageKeys.push(r2Key)
 						imageKeyMap[image.url] = r2Key
 					}
