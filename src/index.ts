@@ -7,6 +7,7 @@ import auth from "./routes/auth"
 import products from "./routes/products"
 import ai from "./routes/ai"
 import { testPresignedUrlGeneration } from "./libs/r2"
+import meta from "./routes/meta"
 const app = new Hono<AppContext>().basePath("/api")
 
 app.use(
@@ -84,6 +85,9 @@ app.route("/products", products)
 
 // AI routes
 app.route("/ai", ai)
+
+// Meta routes
+app.route("/meta", meta)
 
 app.onError(errorHandler)
 
