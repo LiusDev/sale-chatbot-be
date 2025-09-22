@@ -159,6 +159,17 @@ export const syncPageConversations = async (
 	return conversationResults
 }
 
+export const assignAgentToPage = async (
+	c: Context<AppContext>,
+	{ pageId, agentId }: { pageId: string; agentId: number }
+) => {
+	const dbConnection = db(c.env)
+	await dbConnection
+		.update(metaPages)
+		.set({ agent_id: agentId })
+		.where(eq(metaPages.id, pageId))
+}
+
 export const deleteMetaPage = async (
 	c: Context<AppContext>,
 	pageId: string
@@ -245,4 +256,21 @@ export const findConversationByPageAndRecipient = async (
 		.where(eq(metaPageConversations.page_id, pageId))
 	// Filter by recipientId in memory since drizzle sqlite eq on two columns not composed here
 	return conversation.find((c) => c.recipientId === recipientId)
+}
+
+export const updateAgentMode = async (
+	c: Context<AppContext>,
+	{
+		conversationId,
+		agentMode,
+	}: {
+		conversationId: string
+		agentMode: "auto" | "manual"
+	}
+) => {
+	const dbConnection = db(c.env)
+	await dbConnection
+		.update(metaPageConversations)
+		.set({ agentmode: agentMode })
+		.where(eq(metaPageConversations.id, conversationId))
 }

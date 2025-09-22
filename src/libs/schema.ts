@@ -20,12 +20,14 @@ export const products = sqliteTable("products", {
 	description: text().default(""),
 	price: int().notNull(),
 	metadata: text().default(""),
-	product_group_id: int().references(() => productGroups.id),
+	product_group_id: int().references(() => productGroups.id, {
+		onDelete: "cascade",
+	}),
 })
 
 export const productImages = sqliteTable("product_images", {
 	id: int().primaryKey({ autoIncrement: true }),
-	product_id: int().references(() => products.id),
+	product_id: int().references(() => products.id, { onDelete: "cascade" }),
 	image_url: text().notNull(),
 	alt_text: text().default(""),
 	index: int().notNull(),
@@ -37,7 +39,9 @@ export const aiAgents = sqliteTable("ai_agents", {
 	description: text().default(""),
 	model: text().notNull(),
 	system_prompt: text().notNull(),
-	knowledge_source_group_id: int().references(() => productGroups.id),
+	knowledge_source_group_id: int().references(() => productGroups.id, {
+		onDelete: "set null",
+	}),
 	top_k: int().notNull().default(5),
 	temperature: int().notNull().default(70), // 0-100, will be converted to 0.0-1.0
 	max_tokens: int().notNull().default(1000),
@@ -56,6 +60,7 @@ export const metaPages = sqliteTable("meta_pages", {
 	name: text().notNull(),
 	access_token: text(),
 	category: text(),
+	agent_id: int().references(() => aiAgents.id, { onDelete: "set null" }),
 })
 
 export const metaPageConversations = sqliteTable("meta_page_conversations", {

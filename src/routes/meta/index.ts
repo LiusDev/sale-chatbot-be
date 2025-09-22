@@ -14,6 +14,8 @@ import {
 	syncPageConversations,
 	upsertMetaPages,
 	findConversationByPageAndRecipient,
+	assignAgentToPage,
+	updateAgentMode,
 } from "./meta.repo"
 import {
 	getFanpagesFromMeta,
@@ -23,6 +25,8 @@ import {
 import { listResponse, response } from "../../utils/response"
 import { zValidator } from "@hono/zod-validator"
 import {
+	agentIdSchema,
+	agentModeSchema,
 	metaPageSchema,
 	pageIdParamSchema,
 	paramsSchema,
@@ -224,6 +228,27 @@ meta.get(
 	}
 )
 
+// Assign agent to a page
+meta.put(
+	"/pages/:pageId/assign-agent",
+	zValidator("param", pageIdParamSchema),
+	zValidator("json", agentIdSchema),
+	async (c) => {
+		try {
+			const { pageId } = c.req.valid("param")
+			const { agentId } = c.req.valid("json")
+			await assignAgentToPage(c, { pageId, agentId })
+			return response(c, { message: "Agent assigned to page" })
+		} catch (err) {
+			console.error("Error assigning agent to page:", err)
+			return error(c, {
+				message: "Failed to assign agent to page",
+				status: 500,
+			})
+		}
+	}
+)
+
 meta.get(
 	"/pages/:pageId/:conversationId",
 	zValidator("param", paramsSchema),
@@ -286,6 +311,30 @@ meta.post(
 			console.error("Error sending message to Meta:", err)
 			return error(c, {
 				message: "Failed to send message to Meta",
+				status: 500,
+			})
+		}
+	}
+)
+
+// Update agent mode ("auto", "manual")
+meta.put(
+	"/pages/:pageId/:conversationId/agent-mode",
+	zValidator("param", paramsSchema),
+	zValidator("json", agentModeSchema),
+	async (c) => {
+		try {
+			const { conversationId } = c.req.valid("param")
+			const { agentMode } = c.req.valid("json")
+			const result = await updateAgentMode(c, {
+				conversationId,
+				agentMode,
+			})
+			return response(c, { message: "Agent mode updated" })
+		} catch (err) {
+			console.error("Error updating agent mode:", err)
+			return error(c, {
+				message: "Failed to update agent mode",
 				status: 500,
 			})
 		}

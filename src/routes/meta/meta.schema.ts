@@ -16,6 +16,10 @@ export const pageIdParamSchema = z.object({
 	pageId: z.string().min(1, "Page ID is required"),
 })
 
+export const agentIdSchema = z.object({
+	agentId: z.number().min(1, "Agent ID is required"),
+})
+
 export type PageIdParamSchema = z.infer<typeof pageIdParamSchema>
 
 export const conversationIdParamSchema = z.object({
@@ -32,4 +36,8 @@ export const paramsSchema = pageIdParamSchema.extend(
 
 export const sendMessageSchema = z.object({
 	message: z.string().min(1, "Message is required"),
+})
+
+export const agentModeSchema = z.object({
+	agentMode: z.enum(["auto", "manual"]),
 })
