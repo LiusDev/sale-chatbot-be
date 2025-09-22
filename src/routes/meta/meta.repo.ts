@@ -150,17 +150,19 @@ export const syncPageConversations = async (
 		.where(eq(metaPageConversations.page_id, pageId))
 
 	// Step 1: Batch insert all conversations first
-	const conversationValues = conversations.map((conversation) => {
-		const recipient = conversation.participants.data.filter(
-			(participant) => participant.id !== pageId
-		)[0]
-		return {
-			id: conversation.id,
-			page_id: pageId,
-			recipientId: recipient?.id || "",
-			recipientName: recipient?.name || "",
-		}
-	})
+	const conversationValues = conversations
+		.filter((conversation) => conversation.messages)
+		.map((conversation) => {
+			const recipient = conversation.participants.data.filter(
+				(participant) => participant.id !== pageId
+			)[0]
+			return {
+				id: conversation.id,
+				page_id: pageId,
+				recipientId: recipient?.id || "",
+				recipientName: recipient?.name || "",
+			}
+		})
 
 	const conversationResults = await dbConnection
 		.insert(metaPageConversations)
