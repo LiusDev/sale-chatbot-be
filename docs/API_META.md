@@ -415,7 +415,94 @@ Gửi tin nhắn đến một conversation thông qua Meta API và lưu vào dat
 }
 ```
 
-### 9. Delete Meta Page
+### 9. Assign Agent to Page
+
+**PUT** `/meta/pages/:pageId/assign-agent`
+
+Gán một agent cho một trang Meta cụ thể.
+
+#### Path Parameters
+
+| Parameter | Type   | Required | Description  |
+| --------- | ------ | -------- | ------------ |
+| `pageId`  | string | ✅       | Meta Page ID |
+
+#### Request Body
+
+```json
+{
+	"agentId": 123
+}
+```
+
+#### Response
+
+```json
+{
+	"success": true,
+	"data": {
+		"message": "Agent assigned to page"
+	}
+}
+```
+
+#### Error Responses
+
+```json
+{
+	"success": false,
+	"error": {
+		"message": "Failed to assign agent to page",
+		"status": 500
+	}
+}
+```
+
+### 10. Update Agent Mode
+
+**PUT** `/meta/pages/:pageId/:conversationId/agent-mode`
+
+Cập nhật chế độ agent cho một conversation cụ thể (auto hoặc manual).
+
+#### Path Parameters
+
+| Parameter        | Type   | Required | Description     |
+| ---------------- | ------ | -------- | --------------- |
+| `pageId`         | string | ✅       | Meta Page ID    |
+| `conversationId` | string | ✅       | Conversation ID |
+
+#### Request Body
+
+```json
+{
+	"agentMode": "auto"
+}
+```
+
+#### Response
+
+```json
+{
+	"success": true,
+	"data": {
+		"message": "Agent mode updated"
+	}
+}
+```
+
+#### Error Responses
+
+```json
+{
+	"success": false,
+	"error": {
+		"message": "Failed to update agent mode",
+		"status": 500
+	}
+}
+```
+
+### 11. Delete Meta Page
 
 **DELETE** `/meta/pages/:pageId`
 
@@ -710,6 +797,37 @@ async function sendMessageToConversation(pageId, conversationId, message) {
 	return response.json()
 }
 
+// Assign agent to a page
+async function assignAgentToPage(pageId, agentId) {
+	const response = await fetch(`/meta/pages/${pageId}/assign-agent`, {
+		method: "PUT",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ agentId }),
+	})
+
+	return response.json()
+}
+
+// Update agent mode for a conversation
+async function updateAgentMode(pageId, conversationId, agentMode) {
+	const response = await fetch(
+		`/meta/pages/${pageId}/${conversationId}/agent-mode`,
+		{
+			method: "PUT",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ agentMode }),
+		}
+	)
+
+	return response.json()
+}
+
 // Delete a page from database
 async function deleteMetaPage(pageId) {
 	const response = await fetch(`/meta/pages/${pageId}`, {
@@ -758,6 +876,18 @@ const sendResult = await sendMessageToConversation(
 )
 console.log("Message sent:", sendResult)
 
+// Example usage: Assign agent to a page
+const assignResult = await assignAgentToPage("123456789012345", 123)
+console.log("Agent assigned:", assignResult)
+
+// Example usage: Update agent mode
+const modeResult = await updateAgentMode(
+	"123456789012345",
+	"t_123456789012345",
+	"manual"
+)
+console.log("Agent mode updated:", modeResult)
+
 // Example usage: Delete a page
 const deleteResult = await deleteMetaPage("123456789012345")
 console.log("Delete result:", deleteResult)
@@ -805,6 +935,22 @@ curl -X POST "https://your-domain.com/meta/pages/123456789012345/t_1234567890123
   -H "Content-Type: application/json" \
   -d '{
     "message": "Thank you for your message. How can I help you?"
+  }'
+
+# Assign agent to a page
+curl -X PUT "https://your-domain.com/meta/pages/123456789012345/assign-agent" \
+  -H "Authorization: Bearer your-jwt-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId": 123
+  }'
+
+# Update agent mode for a conversation
+curl -X PUT "https://your-domain.com/meta/pages/123456789012345/t_123456789012345/agent-mode" \
+  -H "Authorization: Bearer your-jwt-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentMode": "manual"
   }'
 
 # Delete a page
