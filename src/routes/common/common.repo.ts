@@ -41,20 +41,28 @@ export const getLLMAppContext = async (c: Context<AppContext>) => {
 	return appContext
 }
 
-export const updateAppInfo = async (
+export const upsertAppInfo = async (
 	c: Context<AppContext>,
 	appInfo: UpdateAppInfoBodySchema
 ) => {
 	const dbConnection = db(c.env)
 
-	// Update each key-value pair sequentially
-	// Ai lỡ đọc đoạn này đừng đánh giá D:
-	// CF D1 không hỗ trợ transaction, và cũng chỉ có <= 10 row nên for loop tạm :v
+	// Upsert each key using INSERT ... ON CONFLICT DO UPDATE in a single batch
+	const queries = [] as any[]
 	for (const [key, value] of Object.entries(appInfo)) {
-		await dbConnection
-			.update(commonAppInfo)
-			.set({ value })
-			.where(eq(commonAppInfo.key, key))
+		queries.push(
+			dbConnection
+				.insert(commonAppInfo)
+				.values({ key, value })
+				.onConflictDoUpdate({
+					target: commonAppInfo.key,
+					set: { value },
+				})
+		)
+	}
+
+	if (queries.length > 0) {
+		await dbConnection.batch(queries as any)
 	}
 
 	return getAppInfo(c)

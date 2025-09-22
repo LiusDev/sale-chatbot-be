@@ -50,7 +50,7 @@ export const aiAgents = sqliteTable("ai_agents", {
 
 export const commonAppInfo = sqliteTable("common_app_info", {
 	id: int().primaryKey({ autoIncrement: true }),
-	key: text().notNull(),
+	key: text().notNull().unique(),
 	value: text().notNull(),
 	isPrivate: int({ mode: "boolean" }).notNull().default(false),
 })

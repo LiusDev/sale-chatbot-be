@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `common_app_info_key_unique` ON `common_app_info` (`key`);
