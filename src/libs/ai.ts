@@ -807,7 +807,7 @@ export async function generateAIResponse(
 		]
 
 		// Use AI SDK with provider and tools
-		const result = await generateText({
+		const { text } = await generateText({
 			model: aiProvider.chat(model),
 			messages,
 			tools,
@@ -817,7 +817,10 @@ export async function generateAIResponse(
 			stopWhen: stepCountIs(10),
 		})
 
-		return result
+		return {
+			success: true,
+			text,
+		}
 	} catch (error) {
 		console.error("AI Generation Error:", error)
 		return {

@@ -33,6 +33,9 @@ import {
 	sendMessageSchema,
 } from "./meta.schema"
 import { error } from "../../utils/error"
+import { UIMessage } from "ai"
+import { generateAIResponse } from "../../libs/ai"
+import { AIModel } from "../../types/ai"
 
 const meta = new Hono<AppContext>()
 
@@ -56,31 +59,122 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 				if (!message) continue
 
 				const isEcho = Boolean(message.is_echo)
+				console.log("isEcho", isEcho)
+
 				const text = message.text || ""
 				const mid = message.mid || `${pageId}-${timestamp}`
 
 				const userId = isEcho ? recipientId : senderId
 				if (!userId || !pageId) continue
 				const page = await getPageById(c, pageId)
-				const conversation = await findConversationByPageAndRecipient(
-					c,
-					{
+				if (!page) continue
+
+				// Find conversation once; if not found, sync then re-find.
+				let conversation = await findConversationByPageAndRecipient(c, {
+					pageId,
+					recipientId: userId,
+				})
+				let conversationJustSynced = false
+				if (!conversation) {
+					const metaConversations = await getMetaPageConversations(
+						c,
+						{
+							pageId,
+							pageAccessToken: page.access_token!,
+						}
+					)
+					await syncPageConversations(c, {
+						pageId,
+						conversations: metaConversations.data,
+					})
+					conversation = await findConversationByPageAndRecipient(c, {
 						pageId,
 						recipientId: userId,
-					}
-				)
+					})
+					conversationJustSynced = Boolean(conversation)
+				}
+
+				// If still not found, skip processing
 				if (!conversation) continue
 
-				await saveMessageToDatabase(c, {
-					messageId: mid,
+				// Save message to DB based on direction
+				// - If echo: save outgoing page message (we no longer save in send API)
+				// - If not echo: save incoming user message only when not just synced
+				if (isEcho) {
+					await saveMessageToDatabase(c, {
+						messageId: mid,
+						conversationId: conversation.id,
+						createdTime: new Date(timestamp).toUTCString(),
+						message: text,
+						from: {
+							name: page.name,
+							id: page.id,
+						},
+					})
+				} else if (!conversationJustSynced) {
+					await saveMessageToDatabase(c, {
+						messageId: mid,
+						conversationId: conversation.id,
+						createdTime: new Date(timestamp).toUTCString(),
+						message: text,
+						from: {
+							id: userId,
+							name: conversation.recipientName!,
+						},
+					})
+				}
+
+				// AI Response
+				// Check if conversation agentmode
+				if (isEcho) continue
+				const agentMode = conversation.agentmode
+				if (agentMode !== "auto") continue
+
+				const conversationMessages = await getConversationMessages(c, {
+					pageId,
 					conversationId: conversation.id,
-					createdTime: new Date(timestamp).toUTCString(),
-					message: text,
-					from: {
-						id: isEcho ? pageId : userId,
-						name: isEcho ? page.name : conversation.recipientName!,
-					},
 				})
+
+				const uiMessages: UIMessage[] = conversationMessages
+					.filter((message) => message.message.trim().length > 0)
+					.map((message) => {
+						let from: { id?: string; name?: string } = {}
+						try {
+							from = JSON.parse((message as any).from || "{}")
+						} catch {}
+						const role: "user" | "assistant" =
+							typeof from.id === "string" &&
+							from.id === conversation.recipientId
+								? "user"
+								: "assistant"
+						return {
+							id: message.id,
+							role,
+							parts: [{ type: "text", text: message.message }],
+						}
+					})
+
+				uiMessages.reverse()
+
+				const { text: aiResponseText } = await generateAIResponse(c, {
+					groupId: page.agent?.knowledge_source_group_id || null,
+					model:
+						(page.agent?.model as AIModel) ||
+						"gpt-4.1-mini-2025-04-14",
+					systemPrompt: page.agent?.system_prompt || "",
+					messages: uiMessages,
+					temperature: page.agent?.temperature || 70,
+					maxTokens: page.agent?.max_tokens || 5000,
+					topK: page.agent?.top_k || 5,
+				})
+				if (!aiResponseText) continue
+				const aiResponseResult = await sendMessageToMeta(c, {
+					pageId,
+					recipientId: conversation.recipientId!,
+					message: aiResponseText,
+					pageAccessToken: page.access_token!,
+				})
+				// Do not save here; echo webhook will persist the page's outgoing message
 			}
 		}
 
@@ -295,18 +389,8 @@ meta.post(
 				message,
 				pageAccessToken: page.access_token!,
 			})
-			await saveMessageToDatabase(c, {
-				messageId: metaResponse.message_id,
-				conversationId,
-				// convert to utc timezone
-				createdTime: new Date().toUTCString(),
-				message,
-				from: {
-					name: page.name,
-					id: page.id,
-				},
-			})
-			return response(c, response)
+			// Do not save here; webhook echo event will persist the message
+			return response(c, metaResponse)
 		} catch (err) {
 			console.error("Error sending message to Meta:", err)
 			return error(c, {

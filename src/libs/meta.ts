@@ -14,6 +14,7 @@ const metaBaseAPI = (accessToken: string) =>
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
 		},
+		hooks: {},
 	})
 
 export const getFanpagesFromMeta = async (
