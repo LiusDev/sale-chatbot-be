@@ -69,7 +69,7 @@ export const getMetaPageConversations = async (
 		const conversations = await metaBaseAPI(pageAccessToken)
 			.get(`${pageId}/conversations`, {
 				searchParams: new URLSearchParams({
-					fields: "participants,messages{id,created_time,from,message,attachments}",
+					fields: "participants,messages.limit(100){id,created_time,from,message,attachments}",
 					access_token: pageAccessToken,
 				}),
 			})
