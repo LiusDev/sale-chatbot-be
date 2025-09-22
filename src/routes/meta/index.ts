@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { streamSSE } from "hono/streaming"
 import { AppContext } from "../../types/env"
 import { authMiddleware, metaWebhookVerification } from "../../middlewares"
 import {
@@ -38,6 +39,44 @@ import { generateAIResponse } from "../../libs/ai"
 import { AIModel } from "../../types/ai"
 
 const meta = new Hono<AppContext>()
+
+// In-memory pub/sub for SSE per pageId
+type MessageInsertedEvent = { conversationId: string }
+const pageSubscribers = new Map<
+	string,
+	Set<(payload: MessageInsertedEvent) => void>
+>()
+
+function subscribeToPage(
+	pageId: string,
+	listener: (payload: MessageInsertedEvent) => void
+) {
+	let set = pageSubscribers.get(pageId)
+	if (!set) {
+		set = new Set()
+		pageSubscribers.set(pageId, set)
+	}
+	set.add(listener)
+	return () => {
+		const current = pageSubscribers.get(pageId)
+		if (!current) return
+		current.delete(listener)
+		if (current.size === 0) {
+			pageSubscribers.delete(pageId)
+		}
+	}
+}
+
+function publishMessageInserted(pageId: string, payload: MessageInsertedEvent) {
+	const set = pageSubscribers.get(pageId)
+	if (!set) return
+	console.log("[SSE] publish message-inserted", { pageId, payload })
+	for (const listener of set) {
+		try {
+			listener(payload)
+		} catch {}
+	}
+}
 
 meta.post("/webhook", metaWebhookVerification, async (c) => {
 	try {
@@ -100,6 +139,7 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 				// Save message to DB based on direction
 				// - If echo: save outgoing page message (we no longer save in send API)
 				// - If not echo: save incoming user message only when not just synced
+				let published = false
 				if (isEcho) {
 					await saveMessageToDatabase(c, {
 						messageId: mid,
@@ -111,6 +151,10 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 							id: page.id,
 						},
 					})
+					publishMessageInserted(pageId, {
+						conversationId: conversation.id,
+					})
+					published = true
 				} else if (!conversationJustSynced) {
 					await saveMessageToDatabase(c, {
 						messageId: mid,
@@ -121,6 +165,17 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 							id: userId,
 							name: conversation.recipientName!,
 						},
+					})
+					publishMessageInserted(pageId, {
+						conversationId: conversation.id,
+					})
+					published = true
+				}
+
+				// Always notify at least once for FE to revalidate, even if we skipped saving (e.g., first message after sync)
+				if (!published) {
+					publishMessageInserted(pageId, {
+						conversationId: conversation.id,
 					})
 				}
 
@@ -202,6 +257,64 @@ meta.get("/webhook", async (c) => {
 })
 
 meta.use(authMiddleware)
+
+// SSE: subscribe to message-inserted events per pageId
+meta.get("/pages/:pageId/sse", async (c) => {
+	const pageId = c.req.param("pageId")
+	if (!pageId) {
+		return c.json({ message: "pageId is required" }, 400)
+	}
+	// Ensure proxies don't buffer and keep connection alive
+	c.header("X-Accel-Buffering", "no")
+	c.header("Cache-Control", "no-cache, no-transform")
+	c.header("Connection", "keep-alive")
+	return streamSSE(c, async (stream) => {
+		let nextId = 1
+		console.log("[SSE] client connected", { pageId })
+		const send = (payload: MessageInsertedEvent) => {
+			stream
+				.writeSSE({
+					id: String(nextId++),
+					event: "message-inserted",
+					data: JSON.stringify({
+						conversationId: payload.conversationId,
+					}),
+				})
+				.catch(() => {})
+		}
+		const unsubscribe = subscribeToPage(pageId, send)
+		// initial ready event so clients know subscription is active
+		await stream.writeSSE({
+			id: String(nextId++),
+			event: "ready",
+			data: "ok",
+		})
+		let alive = true
+		const keepAlive = async () => {
+			while (alive) {
+				await stream.sleep(15000)
+				try {
+					await stream.writeSSE({
+						id: String(nextId++),
+						event: "keepalive",
+						data: "ping",
+					})
+				} catch {
+					alive = false
+				}
+			}
+		}
+		keepAlive()
+		await new Promise<void>((resolve) => {
+			stream.onAbort(() => {
+				alive = false
+				unsubscribe()
+				console.log("[SSE] client disconnected", { pageId })
+				resolve()
+			})
+		})
+	})
+})
 
 meta.get("/meta-pages", async (c) => {
 	try {
@@ -389,7 +502,8 @@ meta.post(
 				message,
 				pageAccessToken: page.access_token!,
 			})
-			// Do not save here; webhook echo event will persist the message
+			// Notify subscribers immediately; webhook echo will persist the message shortly after
+			publishMessageInserted(pageId, { conversationId })
 			return response(c, metaResponse)
 		} catch (err) {
 			console.error("Error sending message to Meta:", err)
