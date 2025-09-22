@@ -13,6 +13,7 @@ import {
 	saveMessageToDatabase,
 	syncPageConversations,
 	upsertMetaPages,
+	findConversationByPageAndRecipient,
 } from "./meta.repo"
 import {
 	getFanpagesFromMeta,
@@ -32,12 +33,58 @@ import { error } from "../../utils/error"
 const meta = new Hono<AppContext>()
 
 meta.post("/webhook", metaWebhookVerification, async (c) => {
-	// Get the verified body from the middleware
-	const verifiedBody = c.get("verifiedBody")
-	// const body = JSON.parse(verifiedBody)
+	try {
+		const verifiedBody = c.get("verifiedBody") as string
+		const payload = JSON.parse(verifiedBody)
 
-	console.log("Verified Meta webhook payload:", verifiedBody)
-	return c.json({ message: "Webhook received" }, 200)
+		if (payload.object !== "page" || !Array.isArray(payload.entry)) {
+			return c.json({ message: "Ignored" }, 200)
+		}
+
+		for (const entry of payload.entry) {
+			const pageId = entry.id
+			if (!Array.isArray(entry.messaging)) continue
+			for (const messagingEvent of entry.messaging) {
+				const senderId = messagingEvent.sender?.id
+				const recipientId = messagingEvent.recipient?.id
+				const timestamp = messagingEvent.timestamp
+				const message = messagingEvent.message
+				if (!message) continue
+
+				const isEcho = Boolean(message.is_echo)
+				const text = message.text || ""
+				const mid = message.mid || `${pageId}-${timestamp}`
+
+				const userId = isEcho ? recipientId : senderId
+				if (!userId || !pageId) continue
+				const page = await getPageById(c, pageId)
+				const conversation = await findConversationByPageAndRecipient(
+					c,
+					{
+						pageId,
+						recipientId: userId,
+					}
+				)
+				if (!conversation) continue
+
+				await saveMessageToDatabase(c, {
+					messageId: mid,
+					conversationId: conversation.id,
+					createdTime: new Date(timestamp).toUTCString(),
+					message: text,
+					from: {
+						id: isEcho ? pageId : userId,
+						name: isEcho ? page.name : conversation.recipientName!,
+					},
+				})
+			}
+		}
+
+		return c.json({ message: "Webhook received" }, 200)
+	} catch (err) {
+		console.error("Error processing meta webhook:", err)
+		return c.json({ message: "Webhook error" }, 500)
+	}
 })
 
 meta.get("/webhook", async (c) => {

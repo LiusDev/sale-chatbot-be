@@ -133,7 +133,6 @@ export const syncPageConversations = async (
 					id: message.id,
 					conversation_id: conversation.id,
 					created_time: message.created_time,
-					message_id: message.id,
 					message: message.message,
 					from: JSON.stringify(message.from),
 					attachments: message.attachments
@@ -188,7 +187,7 @@ export const getConversationById = async (
 	const conversation = await dbConnection
 		.select()
 		.from(metaPageConversations)
-		.where(eq(metaPageConversations.page_id, pageId))
+		.where(eq(metaPageConversations.id, conversationId))
 	return conversation[0]
 }
 
@@ -233,4 +232,17 @@ export const saveMessageToDatabase = async (
 		from: JSON.stringify(from),
 		attachments: attachments ? JSON.stringify(attachments) : null,
 	})
+}
+
+export const findConversationByPageAndRecipient = async (
+	c: Context<AppContext>,
+	{ pageId, recipientId }: { pageId: string; recipientId: string }
+) => {
+	const dbConnection = db(c.env)
+	const conversation = await dbConnection
+		.select()
+		.from(metaPageConversations)
+		.where(eq(metaPageConversations.page_id, pageId))
+	// Filter by recipientId in memory since drizzle sqlite eq on two columns not composed here
+	return conversation.find((c) => c.recipientId === recipientId)
 }

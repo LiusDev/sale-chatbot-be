@@ -2,7 +2,7 @@
 
 ## Overview
 
-API quản lý tích hợp Meta (Facebook/Instagram) bao gồm việc lấy danh sách fanpages từ Meta API và lưu trữ thông tin các trang trong database. Hỗ trợ đồng bộ hóa dữ liệu fanpages giữa Meta và hệ thống nội bộ.
+API quản lý tích hợp Meta (Facebook/Instagram) bao gồm việc lấy danh sách fanpages từ Meta API và lưu trữ thông tin các trang trong database. Hỗ trợ đồng bộ hóa dữ liệu fanpages, conversations, và messages giữa Meta và hệ thống nội bộ.
 
 ## Base URL
 
@@ -12,7 +12,7 @@ API quản lý tích hợp Meta (Facebook/Instagram) bao gồm việc lấy danh
 
 ## Authentication
 
-Tất cả endpoints đều yêu cầu authentication token trong header:
+Tất cả endpoints (trừ webhook endpoints) đều yêu cầu authentication token trong header:
 
 ```
 Authorization: Bearer <your-jwt-token>
@@ -164,22 +164,16 @@ Lấy danh sách các trang đã được lưu trữ trong database. Đây là d
 	"success": true,
 	"data": [
 		{
-			"id": 1,
-			"page_id": "123456789012345",
+			"id": "123456789012345",
 			"name": "My Business Page",
 			"access_token": "EAAxxxxxxxxxxxxxxx",
-			"category": "Business",
-			"created_at": "2024-01-15T10:30:00.000Z",
-			"updated_at": "2024-01-15T10:30:00.000Z"
+			"category": "Business"
 		},
 		{
-			"id": 2,
-			"page_id": "987654321098765",
+			"id": "987654321098765",
 			"name": "My Shop Page",
 			"access_token": "EAAyyyyyyyyyyyyyy",
-			"category": "Shopping/Retail",
-			"created_at": "2024-01-15T11:00:00.000Z",
-			"updated_at": "2024-01-15T11:00:00.000Z"
+			"category": "Shopping/Retail"
 		}
 	],
 	"meta": {
@@ -192,15 +186,12 @@ Lấy danh sách các trang đã được lưu trữ trong database. Đây là d
 
 #### Response Fields
 
-| Field          | Type   | Description                   |
-| -------------- | ------ | ----------------------------- |
-| `id`           | number | Internal database ID          |
-| `page_id`      | string | Meta Page ID                  |
-| `name`         | string | Tên trang                     |
-| `access_token` | string | Access token của trang        |
-| `category`     | string | Danh mục trang                |
-| `created_at`   | string | Thời gian tạo (ISO 8601)      |
-| `updated_at`   | string | Thời gian cập nhật (ISO 8601) |
+| Field          | Type   | Description            |
+| -------------- | ------ | ---------------------- |
+| `id`           | string | Meta Page ID           |
+| `name`         | string | Tên trang              |
+| `access_token` | string | Access token của trang |
+| `category`     | string | Danh mục trang         |
 
 ### 4. Get Page Conversations
 
@@ -392,7 +383,9 @@ Gửi tin nhắn đến một conversation thông qua Meta API và lưu vào dat
 		{
 			"id": "t_123456789012345",
 			"page_id": "123456789012345",
-			"agentMode": "auto",
+			"agentmode": "auto",
+			"recipientId": "USER_ID_123",
+			"recipientName": "John Doe",
 			"isConfirmOrder": false
 		}
 	]
@@ -401,12 +394,14 @@ Gửi tin nhắn đến một conversation thông qua Meta API và lưu vào dat
 
 #### Response Fields
 
-| Field            | Type    | Description               |
-| ---------------- | ------- | ------------------------- |
-| `id`             | string  | Conversation ID           |
-| `page_id`        | string  | Meta Page ID              |
-| `agentMode`      | string  | Agent mode (auto/manual)  |
-| `isConfirmOrder` | boolean | Order confirmation status |
+| Field            | Type    | Description                 |
+| ---------------- | ------- | --------------------------- |
+| `id`             | string  | Conversation ID             |
+| `page_id`        | string  | Meta Page ID                |
+| `agentmode`      | string  | Agent mode (auto/manual)    |
+| `recipientId`    | string  | ID của người nhận tin nhắn  |
+| `recipientName`  | string  | Tên của người nhận tin nhắn |
+| `isConfirmOrder` | boolean | Order confirmation status   |
 
 #### Error Responses
 
@@ -489,8 +484,8 @@ CREATE TABLE meta_page_conversation_messages (
     conversation_id TEXT NOT NULL REFERENCES meta_page_conversations(id) ON DELETE CASCADE,
     created_time TEXT NOT NULL,
     message TEXT NOT NULL,
-    from TEXT NOT NULL, -- JSON string
-    attachments TEXT -- JSON string
+    from TEXT NOT NULL, -- JSON object
+    attachments TEXT -- JSON object
 );
 ```
 
@@ -517,6 +512,13 @@ interface MetaFanpageList {
 			after: string
 		}
 	}
+}
+
+interface MetaPage {
+	id: string
+	name: string
+	access_token?: string
+	category?: string
 }
 
 interface MetaPageConversation {
