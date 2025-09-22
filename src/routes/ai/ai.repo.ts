@@ -50,8 +50,6 @@ export const getAgents = async (
 			temperature: aiAgentsTable.temperature,
 			max_tokens: aiAgentsTable.max_tokens,
 			created_by: aiAgentsTable.created_by,
-			created_at: aiAgentsTable.created_at,
-			updated_at: aiAgentsTable.updated_at,
 			// Join with product groups
 			knowledge_source_name: productGroupsTable.name,
 			knowledge_source_description: productGroupsTable.description,
@@ -69,7 +67,6 @@ export const getAgents = async (
 			eq(aiAgentsTable.created_by, systemUsersTable.id)
 		)
 		.where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-		.orderBy(desc(aiAgentsTable.created_at))
 		.limit(limit)
 		.offset((page - 1) * limit)
 
@@ -92,8 +89,6 @@ export const getAgentById = async (
 			temperature: aiAgentsTable.temperature,
 			max_tokens: aiAgentsTable.max_tokens,
 			created_by: aiAgentsTable.created_by,
-			created_at: aiAgentsTable.created_at,
-			updated_at: aiAgentsTable.updated_at,
 			// Join with product groups
 			knowledge_source_name: productGroupsTable.name,
 			knowledge_source_description: productGroupsTable.description,
@@ -155,8 +150,6 @@ export const createAgent = async (
 			temperature,
 			max_tokens: maxTokens,
 			created_by: createdBy,
-			created_at: new Date().toISOString(),
-			updated_at: new Date().toISOString(),
 		})
 		.returning({
 			id: aiAgentsTable.id,
@@ -169,8 +162,6 @@ export const createAgent = async (
 			temperature: aiAgentsTable.temperature,
 			max_tokens: aiAgentsTable.max_tokens,
 			created_by: aiAgentsTable.created_by,
-			created_at: aiAgentsTable.created_at,
-			updated_at: aiAgentsTable.updated_at,
 		})
 
 	return agent[0]
@@ -257,8 +248,6 @@ export const updateAgent = async (
 			temperature: aiAgentsTable.temperature,
 			max_tokens: aiAgentsTable.max_tokens,
 			created_by: aiAgentsTable.created_by,
-			created_at: aiAgentsTable.created_at,
-			updated_at: aiAgentsTable.updated_at,
 		})
 
 	return updatedAgent[0]
@@ -297,8 +286,6 @@ export const deleteAgent = async (
 			temperature: aiAgentsTable.temperature,
 			max_tokens: aiAgentsTable.max_tokens,
 			created_by: aiAgentsTable.created_by,
-			created_at: aiAgentsTable.created_at,
-			updated_at: aiAgentsTable.updated_at,
 		})
 
 	return { success: true, deletedAgent: deletedAgent[0] }
