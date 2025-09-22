@@ -167,13 +167,28 @@ Lấy danh sách các trang đã được lưu trữ trong database. Đây là d
 			"id": "123456789012345",
 			"name": "My Business Page",
 			"access_token": "EAAxxxxxxxxxxxxxxx",
-			"category": "Business"
+			"category": "Business",
+			"agent_id": 123,
+			"agent": {
+				"id": 123,
+				"name": "Tư vấn điện thoại",
+				"description": "AI Agent chuyên tư vấn điện thoại và phụ kiện",
+				"model": "gpt-4.1-mini-2025-04-14",
+				"system_prompt": "Bạn là chuyên gia tư vấn điện thoại...",
+				"knowledge_source_group_id": 1,
+				"top_k": 10,
+				"temperature": 80,
+				"max_tokens": 4000,
+				"created_by": 1
+			}
 		},
 		{
 			"id": "987654321098765",
 			"name": "My Shop Page",
 			"access_token": "EAAyyyyyyyyyyyyyy",
-			"category": "Shopping/Retail"
+			"category": "Shopping/Retail",
+			"agent_id": null,
+			"agent": null
 		}
 	],
 	"meta": {
@@ -186,12 +201,29 @@ Lấy danh sách các trang đã được lưu trữ trong database. Đây là d
 
 #### Response Fields
 
-| Field          | Type   | Description            |
-| -------------- | ------ | ---------------------- |
-| `id`           | string | Meta Page ID           |
-| `name`         | string | Tên trang              |
-| `access_token` | string | Access token của trang |
-| `category`     | string | Danh mục trang         |
+| Field          | Type   | Description                                         |
+| -------------- | ------ | --------------------------------------------------- |
+| `id`           | string | Meta Page ID                                        |
+| `name`         | string | Tên trang                                           |
+| `access_token` | string | Access token của trang                              |
+| `category`     | string | Danh mục trang                                      |
+| `agent_id`     | number | ID của agent được gán cho trang (null nếu chưa gán) |
+| `agent`        | object | Thông tin chi tiết của agent (null nếu chưa gán)    |
+
+#### Agent Object Fields
+
+| Field                       | Type   | Description                            |
+| --------------------------- | ------ | -------------------------------------- |
+| `id`                        | number | Agent ID                               |
+| `name`                      | string | Tên agent                              |
+| `description`               | string | Mô tả agent                            |
+| `model`                     | string | Model AI được sử dụng                  |
+| `system_prompt`             | string | System prompt của agent                |
+| `knowledge_source_group_id` | number | ID nhóm sản phẩm để tìm kiếm thông tin |
+| `top_k`                     | number | Số lượng kết quả tìm kiếm tối đa       |
+| `temperature`               | number | Độ sáng tạo của AI (0-100)             |
+| `max_tokens`                | number | Số token tối đa trong response         |
+| `created_by`                | number | ID người tạo agent                     |
 
 ### 4. Get Page Conversations
 
@@ -546,7 +578,25 @@ CREATE TABLE meta_pages (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     access_token TEXT,
-    category TEXT
+    category TEXT,
+    agent_id INTEGER REFERENCES ai_agents(id) ON DELETE SET NULL
+);
+```
+
+### AI Agents Table Schema
+
+```sql
+CREATE TABLE ai_agents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    model TEXT NOT NULL,
+    system_prompt TEXT NOT NULL,
+    knowledge_source_group_id INTEGER REFERENCES product_groups(id) ON DELETE SET NULL,
+    top_k INTEGER NOT NULL DEFAULT 5,
+    temperature INTEGER NOT NULL DEFAULT 70,
+    max_tokens INTEGER NOT NULL DEFAULT 1000,
+    created_by INTEGER REFERENCES system_users(id)
 );
 ```
 
@@ -606,6 +656,19 @@ interface MetaPage {
 	name: string
 	access_token?: string
 	category?: string
+	agent_id?: number
+	agent?: {
+		id: number
+		name: string
+		description?: string
+		model: string
+		system_prompt: string
+		knowledge_source_group_id?: number
+		top_k: number
+		temperature: number
+		max_tokens: number
+		created_by: number
+	}
 }
 
 interface MetaPageConversation {
@@ -729,6 +792,19 @@ async function getStoredPages() {
 
 	return response.json()
 }
+
+// Example: Access agent information from page data
+const pages = await getStoredPages()
+pages.data.forEach((page) => {
+	console.log(`Page: ${page.name}`)
+	if (page.agent) {
+		console.log(`Assigned Agent: ${page.agent.name}`)
+		console.log(`Agent Model: ${page.agent.model}`)
+		console.log(`Agent Description: ${page.agent.description}`)
+	} else {
+		console.log("No agent assigned to this page")
+	}
+})
 
 // Sync pages to database
 async function syncMetaPages(pages) {
@@ -861,6 +937,16 @@ console.log("Synced conversations:", syncResult.data)
 const conversations = await getPageConversations("123456789012345")
 console.log("Page conversations:", conversations.data)
 
+// Example usage: Check if page has assigned agent
+const page = await getPageById("123456789012345")
+if (page.agent) {
+	console.log(`Page "${page.name}" has agent: ${page.agent.name}`)
+	console.log(`Agent model: ${page.agent.model}`)
+	console.log(`Agent temperature: ${page.agent.temperature}`)
+} else {
+	console.log(`Page "${page.name}" has no assigned agent`)
+}
+
 // Example usage: Get conversation messages
 const messages = await getConversationMessages(
 	"123456789012345",
@@ -980,6 +1066,13 @@ curl -X DELETE "https://your-domain.com/meta/pages/123456789012345" \
 -   **Message management**: Sử dụng `/meta/pages/:pageId/:conversationId` GET để lấy messages
 -   **Message sending**: Sử dụng `/meta/pages/:pageId/:conversationId` POST để gửi tin nhắn
 -   **Delete process**: Sử dụng `/meta/pages/:pageId` DELETE để xóa trang
+
+### Agent Integration
+
+-   **Agent assignment**: Sử dụng `/meta/pages/:pageId/assign-agent` PUT để gán agent cho trang
+-   **Agent information**: Tất cả page endpoints đều trả về thông tin agent (nếu có) trong object `agent`
+-   **Agent mode**: Sử dụng `/meta/pages/:pageId/:conversationId/agent-mode` PUT để cập nhật chế độ agent
+-   **Agent data**: Thông tin agent bao gồm tên, mô tả, model, system prompt, và các tham số cấu hình
 
 ### Webhook Integration
 

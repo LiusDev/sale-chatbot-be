@@ -1,5 +1,6 @@
 import { db } from "../../libs/db"
 import {
+	aiAgents,
 	commonAppInfo,
 	metaPageConversationMessages,
 	metaPageConversations,
@@ -37,8 +38,31 @@ export const getMetaAppSecret = async (c: Context<AppContext>) => {
 
 export const getMetaPages = async (c: Context<AppContext>) => {
 	const dbConnection = db(c.env)
-	const pages = await dbConnection.select().from(metaPages)
-	return pages
+	const result = await dbConnection
+		.select({
+			id: metaPages.id,
+			name: metaPages.name,
+			access_token: metaPages.access_token,
+			category: metaPages.category,
+			agent_id: metaPages.agent_id,
+			// Agent fields
+			agent: {
+				id: aiAgents.id,
+				name: aiAgents.name,
+				description: aiAgents.description,
+				model: aiAgents.model,
+				system_prompt: aiAgents.system_prompt,
+				knowledge_source_group_id: aiAgents.knowledge_source_group_id,
+				top_k: aiAgents.top_k,
+				temperature: aiAgents.temperature,
+				max_tokens: aiAgents.max_tokens,
+				created_by: aiAgents.created_by,
+			},
+		})
+		.from(metaPages)
+		.leftJoin(aiAgents, eq(metaPages.agent_id, aiAgents.id))
+
+	return result
 }
 
 export const upsertMetaPages = async (
@@ -80,11 +104,32 @@ export const upsertMetaPages = async (
 
 export const getPageById = async (c: Context<AppContext>, pageId: string) => {
 	const dbConnection = db(c.env)
-	const page = await dbConnection
-		.select()
+	const result = await dbConnection
+		.select({
+			id: metaPages.id,
+			name: metaPages.name,
+			access_token: metaPages.access_token,
+			category: metaPages.category,
+			agent_id: metaPages.agent_id,
+			// Agent fields
+			agent: {
+				id: aiAgents.id,
+				name: aiAgents.name,
+				description: aiAgents.description,
+				model: aiAgents.model,
+				system_prompt: aiAgents.system_prompt,
+				knowledge_source_group_id: aiAgents.knowledge_source_group_id,
+				top_k: aiAgents.top_k,
+				temperature: aiAgents.temperature,
+				max_tokens: aiAgents.max_tokens,
+				created_by: aiAgents.created_by,
+			},
+		})
 		.from(metaPages)
+		.leftJoin(aiAgents, eq(metaPages.agent_id, aiAgents.id))
 		.where(eq(metaPages.id, pageId))
-	return page[0]
+
+	return result[0]
 }
 
 export const syncPageConversations = async (
