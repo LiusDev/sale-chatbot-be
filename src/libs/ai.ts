@@ -869,7 +869,7 @@ export async function streamAIResponse(
 			model: aiProvider.chat(model),
 			messages,
 			tools,
-			toolChoice: "auto",
+			toolChoice: "required",
 			temperature: normalizeTemperature(temperature),
 			topK,
 			maxOutputTokens: maxTokens,
