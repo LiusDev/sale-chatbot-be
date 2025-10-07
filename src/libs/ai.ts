@@ -873,7 +873,7 @@ export async function streamAIResponse(
 			temperature: normalizeTemperature(temperature),
 			topK,
 			maxOutputTokens: maxTokens,
-			stopWhen: stepCountIs(10),
+			stopWhen: stepCountIs(5),
 		})
 
 		return result
