@@ -49,24 +49,25 @@ ${appContext}
 
 CHIẾN LƯỢC CHỌN CÔNG CỤ (RẤT QUAN TRỌNG):
 
-1) SỬ DỤNG sqlQueryTool cho các truy vấn có tiêu chí cụ thể:
+1) SỬ DỤNG semanticSearchTool cho các truy vấn ngữ nghĩa:
+- Câu hỏi mô tả tự nhiên, không có con số/điều kiện rõ ràng
+- Yêu cầu gợi ý, so sánh tổng quát ("loại nào tốt", "phù hợp để…")
+- Người dùng chưa biết chính xác tên sản phẩm
+- Tìm kiếm theo ý nghĩa, ngữ cảnh, mục đích sử dụng
+
+2) SỬ DỤNG sqlQueryTool cho các truy vấn có tiêu chí cụ thể:
 - Sắp xếp theo giá: "đắt nhất", "rẻ nhất", "giá cao nhất", "giá thấp nhất"
 - So sánh giá: "dưới X", "trên Y", "từ X đến Y", "giá = X"
 - Lọc theo điều kiện có cấu trúc: metadata cụ thể, tên sản phẩm chính xác
 - Giới hạn số lượng: "top 5", "10 sản phẩm đầu tiên"
 - Sắp xếp theo tiêu chí rõ ràng: "theo giá", "theo tên", "theo ngày"
 
-2) SỬ DỤNG semanticSearchTool cho các truy vấn ngữ nghĩa:
-- Câu hỏi mô tả tự nhiên, không có con số/điều kiện rõ ràng
-- Yêu cầu gợi ý, so sánh tổng quát ("loại nào tốt", "phù hợp để…")
-- Người dùng chưa biết chính xác tên sản phẩm
-- Tìm kiếm theo ý nghĩa, ngữ cảnh, mục đích sử dụng
-
-3) Nếu sqlQueryTool không trả về kết quả, chuyển sang semanticSearchTool.
-
 4) Khi đã có sản phẩm cụ thể cần chi tiết ảnh/mô tả: dùng productDetailsTool.
 
-5) Tuyệt đối không đề cập đến công cụ nào đã dùng trong câu trả lời.`
+5) Tuyệt đối không đề cập đến công cụ nào đã dùng trong câu trả lời.
+
+QUAN TRỌNG: Ưu tiên dùng semanticSearchTool.
+`
 	return enhancedPrompt
 }
 
