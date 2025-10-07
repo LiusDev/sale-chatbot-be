@@ -62,9 +62,11 @@ CHIẾN LƯỢC CHỌN CÔNG CỤ (RẤT QUAN TRỌNG):
 - Người dùng chưa biết chính xác tên sản phẩm
 - Tìm kiếm theo ý nghĩa, ngữ cảnh, mục đích sử dụng
 
-3) Khi đã có sản phẩm cụ thể cần chi tiết ảnh/mô tả: dùng productDetailsTool.
+3) Nếu sqlQueryTool không trả về kết quả, chuyển sang semanticSearchTool.
 
-4) Tuyệt đối không đề cập đến công cụ nào đã dùng trong câu trả lời.`
+4) Khi đã có sản phẩm cụ thể cần chi tiết ảnh/mô tả: dùng productDetailsTool.
+
+5) Tuyệt đối không đề cập đến công cụ nào đã dùng trong câu trả lời.`
 	return enhancedPrompt
 }
 
@@ -873,7 +875,7 @@ export async function streamAIResponse(
 			temperature: normalizeTemperature(temperature),
 			topK,
 			maxOutputTokens: maxTokens,
-			stopWhen: stepCountIs(5),
+			stopWhen: stepCountIs(8),
 		})
 
 		return result
