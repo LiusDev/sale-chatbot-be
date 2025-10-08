@@ -891,12 +891,18 @@ export async function enhanceSystemPrompt(
 	c: Context<AppContext>,
 	{ model, originalPrompt }: { model: AIModel; originalPrompt: string }
 ) {
-	const enhancePromptInstruction = `\n\nHãy cải thiện đoạn mô tả sau để làm rõ hơn mục đích, ngữ cảnh và hướng dẫn cho mô hình AI, giúp nó hiểu và thực hiện nhiệm vụ tốt hơn:\n\n${originalPrompt}`
+	const enhancePromptInstruction = `Cải thiện đoạn mô tả sau để làm rõ hơn mục đích, ngữ cảnh và hướng dẫn cho mô hình AI, giúp nó hiểu và thực hiện nhiệm vụ tốt hơn.
+
+QUAN TRỌNG: Chỉ trả về nội dung đã được cải thiện, không thêm bất kỳ lời giới thiệu, lời mở đầu hay kết thúc nào. Không viết "Dưới đây là...", "Bạn có thể sử dụng...", hay bất kỳ lời bình luận nào. Trả về trực tiếp nội dung prompt đã được nâng cấp.
+
+Đoạn mô tả cần cải thiện:
+${originalPrompt}`
 
 	const aiProvider = createAIProvider(c)
 	const { text } = await generateText({
 		model: aiProvider.chat(model),
 		messages: [{ role: "user", content: enhancePromptInstruction }],
+		maxOutputTokens: 1000,
 	})
 
 	return text
