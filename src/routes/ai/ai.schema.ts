@@ -49,6 +49,13 @@ export const playgroundRequestSchema = chatRequestSchema.extend({
 })
 export type PlaygroundRequestSchema = z.infer<typeof playgroundRequestSchema>
 
+export const enhanceSystemPromptRequestSchema = z.object({
+	prompt: z.string().min(1, "Prompt is required"),
+})
+export type EnhanceSystemPromptRequestSchema = z.infer<
+	typeof enhanceSystemPromptRequestSchema
+>
+
 // Chat modes
 export const CHAT_MODES = ["stream", "non-stream"] as const
 export type ChatMode = (typeof CHAT_MODES)[number]

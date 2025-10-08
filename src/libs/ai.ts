@@ -885,3 +885,19 @@ export async function streamAIResponse(
 		throw new Error(`AI streaming failed: ${error}`)
 	}
 }
+
+// Enhance system prompt function (non-stream)
+export async function enhanceSystemPrompt(
+	c: Context<AppContext>,
+	{ model, originalPrompt }: { model: AIModel; originalPrompt: string }
+) {
+	const enhancePromptInstruction = `\n\nHãy cải thiện đoạn mô tả sau để làm rõ hơn mục đích, ngữ cảnh và hướng dẫn cho mô hình AI, giúp nó hiểu và thực hiện nhiệm vụ tốt hơn:\n\n${originalPrompt}`
+
+	const aiProvider = createAIProvider(c)
+	const { text } = await generateText({
+		model: aiProvider.chat(model),
+		messages: [{ role: "user", content: enhancePromptInstruction }],
+	})
+
+	return text
+}

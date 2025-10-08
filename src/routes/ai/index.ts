@@ -10,6 +10,7 @@ import {
 	aiAgentParamSchema,
 	chatRequestSchema,
 	playgroundRequestSchema,
+	enhanceSystemPromptRequestSchema,
 } from "./ai.schema"
 import {
 	createAgent,
@@ -19,7 +20,12 @@ import {
 	getAgentById,
 } from "./ai.repo"
 import { authMiddleware } from "../../middlewares"
-import { generateAIResponse, streamAIResponse } from "../../libs/ai"
+import {
+	enhanceSystemPrompt,
+	generateAIResponse,
+	streamAIResponse,
+} from "../../libs/ai"
+import { AI_MODELS } from "../../types/ai"
 
 const ai = new Hono<AppContext>()
 
@@ -286,6 +292,30 @@ ai.post(
 			console.error("Error in POST /ai/:agentId/playground:", err.message)
 			return error(c, {
 				message: `Failed to use playground: ${err.message}`,
+				status: 500,
+			})
+		}
+	}
+)
+
+ai.post(
+	"/enhance-system-prompt",
+	zValidator("json", enhanceSystemPromptRequestSchema),
+	async (c) => {
+		try {
+			const { prompt } = c.req.valid("json")
+			const enhancedPrompt = await enhanceSystemPrompt(c, {
+				model: AI_MODELS[0],
+				originalPrompt: prompt,
+			})
+			return c.json({ enhancedPrompt })
+		} catch (err: any) {
+			console.error(
+				"Error in POST /ai/enhance-system-prompt:",
+				err.message
+			)
+			return error(c, {
+				message: `Failed to enhance system prompt: ${err.message}`,
 				status: 500,
 			})
 		}
