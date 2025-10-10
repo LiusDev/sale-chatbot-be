@@ -4,6 +4,7 @@ import { z } from "zod"
 const ALLOWED_APP_INFO_KEYS = [
 	"zalo",
 	"shopName",
+	"shopAddress",
 	"metaAccessToken",
 	"metaWebhookVerifyKey",
 	"metaAppSecret",
