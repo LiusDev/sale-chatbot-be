@@ -198,6 +198,23 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 				const agentMode = conversation.agentmode
 				if (agentMode !== "auto") continue
 
+				// Append the new user message to cache instead of invalidating
+				// This avoids hitting Meta API and is much faster
+				const { appendMessageToCache } = await import(
+					"../../libs/cache"
+				)
+				await appendMessageToCache(conversation.id, {
+					id: mid,
+					conversation_id: conversation.id,
+					created_time: new Date(timestamp).toUTCString(),
+					message: text,
+					from: JSON.stringify({
+						id: userId,
+						name: conversation.recipientName!,
+					}),
+					attachments: null,
+				})
+
 				// NEW: Fetch messages from Meta API with caching
 				const conversationMessages =
 					await getConversationMessagesFromMetaAPI(c, {
@@ -242,6 +259,18 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 					`👤 User: ${conversation.recipientName} (${conversation.recipientId})`
 				)
 				console.log(`📝 Question: "${userQuestion}"`)
+				console.log(
+					`📚 Conversation History (${uiMessages.length} messages):`
+				)
+				uiMessages.forEach((msg, idx) => {
+					const msgText =
+						msg.parts[0]?.type === "text" ? msg.parts[0].text : ""
+					const preview =
+						msgText.length > 50
+							? msgText.substring(0, 50) + "..."
+							: msgText
+					console.log(`   ${idx + 1}. [${msg.role}] ${preview}`)
+				})
 				console.log("-".repeat(80))
 
 				const { text: aiResponseText } = await generateAIResponse(c, {
