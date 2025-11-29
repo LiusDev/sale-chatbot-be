@@ -198,24 +198,17 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 				const agentMode = conversation.agentmode
 				if (agentMode !== "auto") continue
 
-				// Append the new user message to cache instead of invalidating
-				// This avoids hitting Meta API and is much faster
-				const { appendMessageToCache } = await import(
+				// Invalidate cache to get fresh messages from Meta API
+				const { invalidateCachedMessages } = await import(
 					"../../libs/cache"
 				)
-				await appendMessageToCache(conversation.id, {
-					id: mid,
-					conversation_id: conversation.id,
-					created_time: new Date(timestamp).toUTCString(),
-					message: text,
-					from: JSON.stringify({
-						id: userId,
-						name: conversation.recipientName!,
-					}),
-					attachments: null,
-				})
+				await invalidateCachedMessages(conversation.id)
 
-				// NEW: Fetch messages from Meta API with caching
+				// Small delay to ensure Meta has indexed the new message
+				// Meta's API is eventually consistent, so we need to wait a bit
+				await new Promise((resolve) => setTimeout(resolve, 1000))
+
+				// Fetch fresh messages from Meta API (will be cached after this)
 				const conversationMessages =
 					await getConversationMessagesFromMetaAPI(c, {
 						pageId,
