@@ -112,20 +112,28 @@ export const sendMessageToMeta = async (
 	}
 
 	try {
+		// Escape single quotes in message to prevent breaking the JSON-like string
+		const escapedMessage = message.replace(/'/g, "\\'")
+
 		const response = await metaBaseAPI(pageAccessToken)
 			.post(`${pageId}/messages`, {
-				body: null,
-				searchParams: new URLSearchParams({
-					recipient: `{id: ${recipientId}}`,
-					message: `{text: '${message}'}`,
-					message_type: "RESPONSE",
-					access_token: pageAccessToken,
+				body: new URLSearchParams({
+					recipient: `{'id':'${recipientId}'}`,
+					messaging_type: "RESPONSE",
+					message: `{'text':'${escapedMessage}'}`,
 				}),
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
 			})
 			.json<{ recipient_id: string; message_id: string }>()
 		return response
 	} catch (error) {
 		console.error("Error sending message to Meta API:", error)
+		// Log more details for debugging
+		if (error instanceof Error) {
+			console.error("Error details:", error.message)
+		}
 		throw new Error(
 			"Failed to send message to Meta. Please check your page access token and try again."
 		)
