@@ -149,7 +149,7 @@ export const syncPageConversations = async (
 		.delete(metaPageConversations)
 		.where(eq(metaPageConversations.page_id, pageId))
 
-	// Step 1: Batch insert all conversations first
+	// Step 1: Batch insert all conversations in chunks to avoid SQLite variable limit
 	const conversationValues = conversations
 		.filter((conversation) => conversation.messages)
 		.map((conversation) => {
@@ -164,12 +164,26 @@ export const syncPageConversations = async (
 			}
 		})
 
-	const conversationResults = await dbConnection
-		.insert(metaPageConversations)
-		.values(conversationValues)
-		.returning()
+	// SQLite has a limit on the number of variables (default ~999)
+	// With 6 fields per conversation, we can safely insert ~15 conversations at once
+	// Using 10 for safety margin
+	const conversationResults = []
+	const chunkSize = 10
+	for (let i = 0; i < conversationValues.length; i += chunkSize) {
+		const chunk = conversationValues.slice(i, i + chunkSize)
+		const results = await dbConnection
+			.insert(metaPageConversations)
+			.values(chunk)
+			.returning()
+		conversationResults.push(...results)
+	}
+
+	// NOTE: Temporarily disabled - messages fetched from Meta API on-demand
+	// This reduces database load and handles large message volumes better
+	// Will be re-enabled when implementing proper database message storage
 
 	// Step 2: Loop through each conversation and batch insert its messages in chunks
+	/* 
 	for (const conversation of conversations) {
 		if (
 			conversation.messages?.data &&
@@ -202,6 +216,7 @@ export const syncPageConversations = async (
 			}
 		}
 	}
+	*/
 
 	return conversationResults
 }
@@ -249,6 +264,12 @@ export const getConversationById = async (
 	return conversation[0]
 }
 
+/**
+ * @deprecated Temporarily not used - messages are fetched from Meta API
+ * This function remains for future re-implementation of database storage
+ *
+ * Get conversation messages from database
+ */
 export const getConversationMessages = async (
 	c: Context<AppContext>,
 	{ pageId, conversationId }: { pageId: string; conversationId: string }
@@ -261,6 +282,41 @@ export const getConversationMessages = async (
 		.where(eq(metaPageConversationMessages.conversation_id, conversationId))
 		.orderBy(desc(metaPageConversationMessages.created_time))
 	return messages
+}
+
+/**
+ * NEW: Fetch conversation messages from Meta API with caching
+ * This replaces the database-based getConversationMessages for now
+ */
+export const getConversationMessagesFromMetaAPI = async (
+	c: Context<AppContext>,
+	{ pageId, conversationId }: { pageId: string; conversationId: string }
+) => {
+	// Get page to retrieve access token
+	const page = await getPageById(c, pageId)
+	if (!page || !page.access_token) {
+		throw new Error("Page not found or access token missing")
+	}
+
+	// Import the Meta API function
+	const { getConversationMessagesFromMeta } = await import("../../libs/meta")
+
+	// Fetch messages from Meta API (with caching)
+	const metaMessages = await getConversationMessagesFromMeta(c, {
+		conversationId,
+		pageAccessToken: page.access_token,
+		limit: 100,
+	})
+
+	// Transform Meta API response to match database format for compatibility
+	return metaMessages.map((msg: any) => ({
+		id: msg.id,
+		conversation_id: conversationId,
+		created_time: msg.created_time,
+		message: msg.message || "",
+		from: JSON.stringify(msg.from),
+		attachments: msg.attachments ? JSON.stringify(msg.attachments) : null,
+	}))
 }
 
 export const saveMessageToDatabase = async (

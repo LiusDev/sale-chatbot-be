@@ -6,6 +6,7 @@ import {
 	deleteMetaPage,
 	getConversationById,
 	getConversationMessages,
+	getConversationMessagesFromMetaAPI,
 	getMetaAccessToken,
 	getMetaPages,
 	getMetaWebhookVerifyKey,
@@ -81,6 +82,7 @@ function publishMessageInserted(pageId: string, payload: MessageInsertedEvent) {
 meta.post("/webhook", metaWebhookVerification, async (c) => {
 	try {
 		const verifiedBody = c.get("verifiedBody") as string
+
 		const payload = JSON.parse(verifiedBody)
 
 		if (payload.object !== "page" || !Array.isArray(payload.entry)) {
@@ -136,9 +138,14 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 				// If still not found, skip processing
 				if (!conversation) continue
 
+				// NOTE: Temporarily disabled - messages are fetched from Meta API on-demand
+				// This reduces database load and handles large message volumes better
+				// Will be re-enabled when implementing proper database message storage
+
 				// Save message to DB based on direction
 				// - If echo: save outgoing page message (we no longer save in send API)
 				// - If not echo: save incoming user message only when not just synced
+				/* 
 				let published = false
 				if (isEcho) {
 					await saveMessageToDatabase(c, {
@@ -178,6 +185,12 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 						conversationId: conversation.id,
 					})
 				}
+				*/
+
+				// Always notify frontend to revalidate
+				publishMessageInserted(pageId, {
+					conversationId: conversation.id,
+				})
 
 				// AI Response
 				// Check if conversation agentmode
@@ -185,10 +198,12 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 				const agentMode = conversation.agentmode
 				if (agentMode !== "auto") continue
 
-				const conversationMessages = await getConversationMessages(c, {
-					pageId,
-					conversationId: conversation.id,
-				})
+				// NEW: Fetch messages from Meta API with caching
+				const conversationMessages =
+					await getConversationMessagesFromMetaAPI(c, {
+						pageId,
+						conversationId: conversation.id,
+					})
 
 				const uiMessages: UIMessage[] = conversationMessages
 					.filter((message) => message.message.trim().length > 0)
@@ -211,6 +226,24 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 
 				uiMessages.reverse()
 
+				// Get the latest user message (the one that triggered this response)
+				const latestUserMessage = uiMessages
+					.filter((msg) => msg.role === "user")
+					.pop()
+				const userQuestion =
+					latestUserMessage?.parts[0]?.type === "text"
+						? latestUserMessage.parts[0].text
+						: text
+
+				console.log("\n" + "=".repeat(80))
+				console.log("🤖 AI AUTO-REPLY")
+				console.log("=".repeat(80))
+				console.log(
+					`👤 User: ${conversation.recipientName} (${conversation.recipientId})`
+				)
+				console.log(`📝 Question: "${userQuestion}"`)
+				console.log("-".repeat(80))
+
 				const { text: aiResponseText } = await generateAIResponse(c, {
 					groupId: page.agent?.knowledge_source_group_id || null,
 					model:
@@ -222,7 +255,16 @@ meta.post("/webhook", metaWebhookVerification, async (c) => {
 					maxTokens: page.agent?.max_tokens || 5000,
 					topK: page.agent?.top_k || 5,
 				})
-				if (!aiResponseText) continue
+
+				if (!aiResponseText) {
+					console.log("⚠️  No AI response generated")
+					console.log("=".repeat(80) + "\n")
+					continue
+				}
+
+				console.log(`💬 AI Response: "${aiResponseText}"`)
+				console.log("=".repeat(80) + "\n")
+
 				const aiResponseResult = await sendMessageToMeta(c, {
 					pageId,
 					recipientId: conversation.recipientId!,
@@ -460,16 +502,27 @@ meta.get(
 	"/pages/:pageId/:conversationId",
 	zValidator("param", paramsSchema),
 	async (c) => {
-		const { pageId, conversationId } = c.req.valid("param")
-		const conversation = await getConversationMessages(c, {
-			pageId,
-			conversationId,
-		})
-		return listResponse(c, conversation, {
-			total: conversation.length,
-			page: 1,
-			limit: 99,
-		})
+		try {
+			const { pageId, conversationId } = c.req.valid("param")
+
+			// NEW: Fetch from Meta API with caching
+			const conversation = await getConversationMessagesFromMetaAPI(c, {
+				pageId,
+				conversationId,
+			})
+
+			return listResponse(c, conversation, {
+				total: conversation.length,
+				page: 1,
+				limit: 99,
+			})
+		} catch (err) {
+			console.error("Error fetching conversation messages:", err)
+			return error(c, {
+				message: "Failed to fetch conversation messages",
+				status: 500,
+			})
+		}
 	}
 )
 
